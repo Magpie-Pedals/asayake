@@ -50,7 +50,6 @@ body {
 }
 .asa-track:hover {
   background: var(--asa-c3b);
-  /* color: var(--asa-c1); */
 }
 .asa-track-playing {
   background: var(--asa-c4) !important;

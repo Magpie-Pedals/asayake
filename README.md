@@ -1,6 +1,78 @@
 # Asayake
 Asayake is a static music player that is easy to self-host. 
 
+# Setup
+
+## Set up the tracks
+
+Put the albums (audio files) in some directory like `./data`. 
+
+You don't have to put the audio files in this repo directory but it makes it easier. 
+
+The `.gitignore` file ignores `data*` so its pretty safe to put it here. 
+
+You might have a structure like this:
+```
+data/
+-- album 1/
+---- track 1.mp3
+---- track 2.mp3
+---- cover.png
+-- album 1/
+---- track 1.mp3
+---- track 2.mp3
+---- cover.png
+```
+
+## Bun
+
+This project was written for `bun`; an alternative to NodeJS, NPM, TSC and more. Its super fast and easy to work with. 
+
+[Intall Bun](https://bun.com/docs/installation)
+
+[More on Bun](https://bun.com/)
+
+*Note: This will likely work with NodeJS / NPM / TSC as well.*
+
+## Install dependencies
+
+```sh
+bun install
+```
+
+## Ripper
+
+Run the ripper tool to extract metadata from the mp3 files.
+```sh
+bun tools/ripper.ts <dir>
+```
+
+This will output metadata JSON files to `./dist/metadata`.
+
+## Compile
+
+```sh
+bun tools/build.ts <dir> <res?>
+```
+
+Where `<dir>` is the same directory we ran the ripper on.
+
+The `<res?>` paramter is optional and allows for overriding the static resource directory with your own.
+
+## Serve
+
+The `<dir>` we've been using is now ready to serve. 
+
+The files here could be put on a file or object storage server.
+
+For testing we will serve it locally
+
+```sh
+bunx http-server <dir>
+```
+
+# Usage
+
 ## Master Track List
 
 The master track list is a `metadata.json` file that contains a single instance of a `MasterList` type object.
@@ -73,72 +145,41 @@ const playlist = [
 ];
 ```
 
-# Usage
+## Minimal Example
 
-## Set up the tracks
-
-Put the albums (audio files) in some directory like `./data`. 
-
-You don't have to put the audio files in this repo directory but it makes it easier. 
-
-The `.gitignore` file ignores `data*` so its pretty safe to put it here. 
-
-You might have a structure like this:
-```
-data/
--- album 1/
----- track 1.mp3
----- track 2.mp3
----- cover.png
--- album 1/
----- track 1.mp3
----- track 2.mp3
----- cover.png
+```ts
+// Create our playlist
+const playlist = [
+  '10007019',
+  '13835280',
+  '14389788',
+];
+// Create a new instance of asa
+// The `asa-element` is the element where we want to render the player
+const asa = new Asa('asa-element');
+// call `yeet` to start Asayake 
+// We can call this again whenever we want to load a new playlist
+asa.yeet(playlist);
 ```
 
-## Bun
+## Customization
 
-This project was written for `bun`; an alternative to NodeJS, NPM, TSC and more. Its super fast and easy to work with. 
+Asayake exposes several CSS classes. Just inspect the `asa-player` element to see them all. 
+All CSS classes used by Asakyake are prefixed with `asa-*`.
 
-[Intall Bun](https://bun.com/docs/installation)
-
-[More on Bun](https://bun.com/)
-
-*Note: This will likely work with NodeJS / NPM / TSC as well.*
-
-## Install dependencies
-
-```sh
-bun install
+When Asayake is currently playing a track the `asa-player` element will get the `asa-playing` class. You can use this to change the CSS:
+```css
+/* Highlights on play */
+.asa-playing .asa-pp-button {
+  background: red;
+}
 ```
 
-## Ripper
-
-Run the ripper tool to extract metadata from the mp3 files.
-```sh
-bun tools/ripper.ts <dir>
+When a track in the `asa-playlist` element is selected, the given `asa-track` element will get the `asa-track-playing` class. You can use this to highlight the current track:
+```css
+.asa-track-playing {
+  background: red;
+}
 ```
 
-This will output metadata JSON files to `./dist/metadata`.
 
-## Compile
-
-```sh
-bun tools/build.ts <dir> <res?>
-```
-
-Where `<dir>` is the same directory we ran the ripper on.
-
-The `<res?>` paramter is optional and allows for overriding the static resource directory with your own.
-
-## Serve
-
-The `<dir>` we've been using is now ready to serve. 
-
-The files here could be put on a file or object storage server.
-
-For testing we will serve it locally
-
-```sh
-bunx http-server <dir>
-```
