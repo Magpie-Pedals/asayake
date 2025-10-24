@@ -108,10 +108,6 @@ body {
   overflow: hidden;
 }
 
-.asa-player input[type="range"] {
-  display: none;
-}
-
 .asa-scrubber {
   width: 100%;
   height: 1rem;
@@ -130,8 +126,28 @@ body {
   height: 100%;
 }
 
+.asa-volume-control {
+  display: inline-block;
+  width: 50%;
+  height: 0.5rem;
+  background: var(--asa-c2);
+  position: relative;
+  cursor: pointer;
+  border-radius: 0.25rem;
+  overflow: hidden;
+}
+.asa-volume-control:hover {
+  background: var(--asa-c3);
+}
+.asa-volume-fill {
+  background: var(--asa-c4);
+  width: 50%;
+  height: 100%;
+}
+
 .asa-timestamp {
-  width: 100%;
+  display: inline-block;
+  width: 50%;
   text-align: right;
   color: var(--asa-c3);
 }

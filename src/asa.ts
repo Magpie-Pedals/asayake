@@ -15,6 +15,7 @@ type Elements = {
   nowPlayingArtist: HTMLElement | null;
   nowPlayingAlbum: HTMLElement | null;
   scrubberFill: HTMLElement | null;
+  volumeFill: HTMLElement | null;
   albumImage: HTMLImageElement | null;
   tracks: HTMLElement[] | null;
 };
@@ -37,6 +38,7 @@ class Asa {
       nowPlayingArtist: null,
       nowPlayingAlbum: null,
       scrubberFill: null,
+      volumeFill: null,
       albumImage: null,
       tracks: [],
     };
@@ -149,6 +151,18 @@ class Asa {
     const newTime = percent * this.el.audioPlayer.duration;
     this.el.audioPlayer.currentTime = newTime;
   }
+  private OnVolumeChange(e: MouseEvent): void {
+    if (!this.el.audioPlayer) return;
+    const volumeControl = e.currentTarget as HTMLElement;
+    const rect = volumeControl.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const width = rect.width;
+    const percent = clickX / width;
+    this.el.audioPlayer.volume = percent;
+    if (this.el.volumeFill) {
+      this.el.volumeFill.style.width = `${percent * 100}%`;
+    }
+  }
   private onPlaylistClick(trackIndex: number): void {
     console.log(`Track ${trackIndex} clicked`);
     this.updateTrack(trackIndex);
@@ -226,6 +240,14 @@ class Asa {
     scrubber.onclick = (e: MouseEvent) => { this.onScrub(e); };
     controlsElement.appendChild(scrubber);
 
+    const volumeControl = document.createElement('div');
+    volumeControl.className = 'asa-volume-control';
+    this.el.volumeFill = document.createElement('div');
+    this.el.volumeFill.className = 'asa-volume-fill';
+    volumeControl.appendChild(this.el.volumeFill);
+    volumeControl.onmousemove = (e: MouseEvent) => { this.OnVolumeChange(e); };
+    controlsElement.appendChild(volumeControl);
+
     const timeStamp = document.createElement('div');
     timeStamp.className = 'asa-timestamp';
     timeStamp.innerText = '00:00 / 00:00';
@@ -238,6 +260,7 @@ class Asa {
     controlsElement.appendChild(controlsBtnWrap);
     controlsElement.appendChild(scrubber);
     this.el.asa.appendChild(controlsElement);
+    this.el.asa.appendChild(volumeControl);
     this.el.asa.appendChild(timeStamp);
     // NOTE:
     // Listening for `ended` has some delay so use this instead
