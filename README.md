@@ -1,3 +1,31 @@
+# Asayake
+Asayake is a static music player that is easy to self-host. 
+
+## Master Track List
+
+The master track list is a `metadata.json` file that contains a single instance of a `MasterList` type object.
+
+```ts
+type TrackMeta = {
+  title: string; // The track title
+  artist: string; // The list of artists
+  albumTitle: string; // The album name
+  albumDate: Date; // The date the album was released
+  albumImageUri: string; // The URL to the album image
+  audioUri: string; // The URL to the track
+  duration: number; // The duration of the track in seconds
+  size: number; // The size of the track in bytes
+  bitRate: number; // The bit rate of the track in kbps
+}
+
+type MasterList = {
+  [key: string]: TrackMeta;
+};
+```
+
+An example 
+
+# Usage
 ## Set up the tracks
 
 Put the albums (audio files) in some directory like `./data`. 
@@ -45,6 +73,7 @@ bun tools/build.ts <dir> <res?>
 ```
 
 Where `<dir>` is the same directory we ran the ripper on.
+
 The `<res?>` paramter is optional and allows for overriding the static resource directory with your own.
 
 ## Serve

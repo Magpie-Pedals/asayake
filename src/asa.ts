@@ -1,7 +1,7 @@
 console.log("Hello, World!");
 
-import type { MasterList } from '../types.ts';
-import type { TrackMeta } from '../types.ts';
+import type { MasterList } from './types.ts';
+import type { TrackMeta } from './types.ts';
 
 type PlaylistRaw = string[];
 type Playlist = TrackMeta[];

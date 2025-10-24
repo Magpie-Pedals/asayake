@@ -2,8 +2,9 @@ import { exec } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
-import type { MasterList } from '../types.ts';
-import type { RecordRaw } from '../types.ts';
+// Import types
+import type { MasterList } from '../src/types.ts';
+import type { RecordRaw } from '../src/types.ts';
 
 class Ripper {
   private exitOnError = true;
