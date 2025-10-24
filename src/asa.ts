@@ -26,6 +26,7 @@ type AsaVis = {
   bufferLength: number;
   dataArray: Uint8Array<ArrayBuffer>;
   mode: number;
+  fn: () => void;
 }
 
 class Asa {
@@ -151,9 +152,38 @@ class Asa {
       this.pause();
     }
   }
+  private updateVisMode(): void {
+    if (!this.vis) return;
+    switch (this.vis.mode) {
+      case 0:
+        this.vis.fn = this.draw0.bind(this);
+        break;
+      case 1:
+        this.setupAudioContext(64);
+        this.vis.fn = this.draw1.bind(this);
+        break;
+      case 2:
+        this.setupAudioContext(2048);
+        this.vis.fn = this.draw1.bind(this);
+        break;
+      case 3:
+        this.setupAudioContext(64);
+        this.vis.fn = this.draw2.bind(this);
+        break;
+      case 4:
+        this.setupAudioContext(2048);
+        this.vis.fn = this.draw2.bind(this);
+        break;
+      default:
+        this.vis.fn = this.draw1.bind(this);
+        break;
+    }
+  }
   private onAlbumImageClick(): void {
     if (!this.vis) return;
-    this.vis.mode = (this.vis.mode + 1) % 3;
+    this.vis.mode = (this.vis.mode + 1) % 4;
+    console.log(`Visualization mode changed to ${this.vis.mode}`);
+    this.updateVisMode();
   }
   private onShuffleClick(): void {
     this.isShuffle = !this.isShuffle;
@@ -294,39 +324,31 @@ class Asa {
     if (!this.vis) return;
     requestAnimationFrame(this.draw.bind(this));
     this.vis.analyser.getByteFrequencyData(this.vis.dataArray);
-    switch (this.vis.mode) {
-      case 0:
-        this.draw0();
-        break;
-      case 1:
-        this.draw1();
-        break;
-      case 2:
-        this.draw2();
-        break;
-      default:
-        this.draw0();
-        break;
-    }
+    this.vis.fn();
   }
-  private setupAudioContext(): void {
+  private setupAudioContext(fftSize: number = 2048): void {
     if (this.el.albumImage && this.el.audioPlayer) {
       const ctx = this.el.albumImage.getContext('2d');
+      if (this.vis && this.vis.audioCtx) {
+        this.vis.audioCtx.close();
+      }
       const audioCtx = new (AudioContext)();
       const source = audioCtx.createMediaElementSource(this.el.audioPlayer);
       const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 128;//2048
+      analyser.fftSize = fftSize;
       source.connect(analyser);
       analyser.connect(audioCtx.destination);
       const bufferLength = analyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
+      const mode = this.vis?.mode || 1;// 0 is none
       this.vis = {
         ctx: ctx,
         audioCtx: audioCtx,
         analyser: analyser,
         bufferLength: bufferLength,
         dataArray: dataArray,
-        mode: 1,// 0 is none
+        mode: mode,
+        fn: () => { },// Will be set later
       };
 
       this.el.audioPlayer.onplay = () => {
@@ -459,6 +481,8 @@ class Asa {
 
     // Set up the audio context
     this.setupAudioContext();
+    // Make sure we have the right draw function
+    this.updateVisMode();
   }
   async yeet(playlistRaw: AsaPlaylistRaw = []): Promise<void> {
     // We only want to grab the  master list once
