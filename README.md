@@ -71,6 +71,8 @@ For testing we will serve it locally
 bunx http-server <dir>
 ```
 
+Navigate your browser to `localhost:8080/asayake` to view the player.
+
 # Usage
 
 ## Master Track List
@@ -128,7 +130,7 @@ An example `metadata.json` might look like:
 
 There is only one `metadata.json` master list. Playlists reference entries in this list.
 
-If that seems like a lot, don't worry. We can automatically generate this data from a directory of mp3s with the `ripper.ts` tool.
+While this file can be written manually, the typical workflow is to generate it with `tools/ripper.ts`.
 
 ## Playlists
 
