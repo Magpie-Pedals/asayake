@@ -16,7 +16,7 @@ execSync('bun build src/asa.ts --outfile asa.js --outdir dist', { stdio: 'inheri
 // Copy all files from res to dist
 console.log('Copying resource files to dist...');
 fs.readdirSync(dirRes).forEach(file => {
-  fs.copyFileSync(path.join('res', file), path.join(dirRes, file));
+  fs.copyFileSync(path.join(dirRes, file), path.join('dist', file));
 });
 
 // Copy all files from dist to fianl directory

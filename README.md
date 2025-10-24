@@ -45,7 +45,7 @@ bun tools/build.ts <dir> <res?>
 Where `<dir>` is the same directory we ran the ripper on.
 The `<res?>` paramter is optional and allows for overriding the static resource directory with your own.
 
-# Serve
+## Serve
 
 The `<dir>` we've been using is now ready to serve. 
 

@@ -289,32 +289,9 @@ class Asa {
   }
 }
 
-//
-// Demo usage
-//
-
-// Add track keys here to include in the playlist
-const playlist1: PlaylistRaw = [
-  '10007019',
-  '13835280',
-  '14389788',
-];
-const playlist2: PlaylistRaw = [
-  '16026300',
-  '19429127',
-  '27777941',
-];
-
-const asa = new Asa('asa-element');
-asa.yeet(playlist1);
-
-const p1Btn = document.getElementById('playlist1-btn');
-const p2Btn = document.getElementById('playlist2-btn');
-p1Btn?.addEventListener('click', () => {
-  console.log("Loading Playlist 1");
-  asa.yeet(playlist1);
-});
-p2Btn?.addEventListener('click', () => {
-  console.log("Loading Playlist 2");
-  asa.yeet(playlist2);
-});
+declare global {
+  interface Window {
+    Asa: typeof Asa;
+  }
+}
+window.Asa = Asa;
