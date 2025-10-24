@@ -1,22 +1,22 @@
 // These types are shared between the frontend and tool code
 
-type TrackMeta = {
+type AsaTrackMeta = {
   title: string; // The track title
   artist: string; // The list of artists
   albumTitle: string; // The album name
   albumDate: Date; // The date the album was released
   albumImageUri: string; // The URL to the album image
   audioUri: string; // The URL to the track
-  duration: number; // The duration of the track in seconds
-  size: number; // The size of the track in bytes
-  bitRate: number; // The bit rate of the track in kbps
+  duration?: number; // The duration of the track in seconds
+  size?: number; // The size of the track in bytes
+  bitRate?: number; // The bit rate of the track in kbps
 }
 
-type MasterList = {
-  [key: string]: TrackMeta;
+type AsaMasterList = {
+  [key: string]: AsaTrackMeta;
 };
 
-type RecordRaw = {
+type AsaRecordRaw = {
   filename: string;
   format_name: string;
   format_long_name: string;
@@ -33,4 +33,4 @@ type RecordRaw = {
   };
 }
 
-export type { TrackMeta, MasterList, RecordRaw };
+export type { AsaTrackMeta, AsaMasterList, AsaRecordRaw };

@@ -1,12 +1,12 @@
 console.log("Hello, World!");
 
-import type { MasterList } from './types.ts';
-import type { TrackMeta } from './types.ts';
+import type { AsaMasterList } from './types.ts';
+import type { AsaTrackMeta } from './types.ts';
 
-type PlaylistRaw = string[];
-type Playlist = TrackMeta[];
+type AsaPlaylistRaw = string[];
+type AsaPlaylist = AsaTrackMeta[];
 
-type Elements = {
+type AsaElements = {
   target: HTMLElement;
   asa: HTMLElement | null;
   audioPlayer: HTMLAudioElement | null;
@@ -20,9 +20,9 @@ type Elements = {
 };
 
 class Asa {
-  private el: Elements;
-  private master: MasterList | null = null;
-  private playlist: Playlist = [];
+  private el: AsaElements;
+  private master: AsaMasterList | null = null;
+  private playlist: AsaPlaylist = [];
   private trackIndex: number = 0;
   constructor(elementId: string) {
     const element = document.getElementById(elementId);
@@ -48,7 +48,7 @@ class Asa {
       throw new Error("Failed to load master metadata");
     }
   }
-  private static async fetchMetadata(): Promise<MasterList | null> {
+  private static async fetchMetadata(): Promise<AsaMasterList | null> {
     try {
       const response = await fetch('metadata/metadata.json');
       const data = await response.json();
@@ -59,8 +59,8 @@ class Asa {
       return null;
     }
   }
-  private static makePlaylist(master: MasterList, playlistRaw: PlaylistRaw): Playlist {
-    const playlist: Playlist = [];
+  private static makePlaylist(master: AsaMasterList, playlistRaw: AsaPlaylistRaw): AsaPlaylist {
+    const playlist: AsaPlaylist = [];
     for (const [key, data] of Object.entries(master)) {
       if (playlistRaw.includes(key)) {
         playlist.push(data);
@@ -196,7 +196,7 @@ class Asa {
     this.play();
     this.trackIndex = trackIndex;
   }
-  private initPlayer(playlist: Playlist): void {
+  private initPlayer(playlist: AsaPlaylist): void {
     this.el.target.innerHTML = ''; // Clear existing content
     this.el.asa = document.createElement('div');
     this.el.asa.className = 'asa-player';
@@ -318,7 +318,7 @@ class Asa {
     // Finally, append to target
     this.el.target.appendChild(this.el.asa);
   }
-  async yeet(playlistRaw: PlaylistRaw = []): Promise<void> {
+  async yeet(playlistRaw: AsaPlaylistRaw = []): Promise<void> {
     // We only want to grab the  master list once
     if (!this.master) {
       await this.init();

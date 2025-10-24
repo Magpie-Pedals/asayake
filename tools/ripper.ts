@@ -3,8 +3,8 @@ import fs from 'fs';
 import path from 'path';
 
 // Import types
-import type { MasterList } from '../src/types.ts';
-import type { RecordRaw } from '../src/types.ts';
+import type { AsaMasterList } from '../src/types.ts';
+import type { AsaRecordRaw } from '../src/types.ts';
 
 class Ripper {
   private exitOnError = true;
@@ -47,7 +47,7 @@ class Ripper {
     });
   }
   // Traverse directory and probe files
-  private async traverseAndProbe(dir: string, recordRaw: RecordRaw[]): Promise<RecordRaw[]> {
+  private async traverseAndProbe(dir: string, recordRaw: AsaRecordRaw[]): Promise<AsaRecordRaw[]> {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
@@ -61,7 +61,7 @@ class Ripper {
           continue;
         }
         const dataFull = JSON.parse(raw);
-        const rec: RecordRaw = dataFull.format;
+        const rec: AsaRecordRaw = dataFull.format;
         if (!rec) {
           this.error(`No tags found in metadata for ${fullPath}`);
           continue;
@@ -74,8 +74,8 @@ class Ripper {
     return recordRaw;
   }
   // Process raw records into final data
-  private process(recordRaw: RecordRaw[]) {
-    const listing: MasterList = {};
+  private process(recordRaw: AsaRecordRaw[]) {
+    const listing: AsaMasterList = {};
     for (const record of recordRaw) {
       // We use a hash of some meta data to generate a unique key for each track
       const hashInput = `${record.tags.album}${record.tags.artist}${record.tags.title}`;
@@ -104,7 +104,7 @@ class Ripper {
   // Run the ripper
   async run(dir: string, exitOnError: boolean = true): Promise<void> {
     this.exitOnError = exitOnError;
-    let recordRaw: RecordRaw[] = [];
+    let recordRaw: AsaRecordRaw[] = [];
     fs.mkdirSync(`dist/metadata`, { recursive: true });
     recordRaw = await this.traverseAndProbe(dir, recordRaw);
     fs.writeFileSync(`dist/metadata/rawdata.json`, JSON.stringify(recordRaw, null, 2));

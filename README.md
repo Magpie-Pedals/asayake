@@ -13,9 +13,9 @@ type TrackMeta = {
   albumDate: Date; // The date the album was released
   albumImageUri: string; // The URL to the album image
   audioUri: string; // The URL to the track
-  duration: number; // The duration of the track in seconds
-  size: number; // The size of the track in bytes
-  bitRate: number; // The bit rate of the track in kbps
+  duration?: number; // The duration of the track in seconds
+  size?: number; // The size of the track in bytes
+  bitRate?: number; // The bit rate of the track in kbps
 }
 
 type MasterList = {
@@ -23,9 +23,58 @@ type MasterList = {
 };
 ```
 
-An example 
+An example `metadata.json` might look like:
+```json
+{
+  "10007019": {
+    "title": "The Moss Covers the Earth",
+    "artist": "Andreji Rublev",
+    "albumTitle": "Sample Collab 5",
+    "albumDate": "2019-01-01T00:00:00.000Z",
+    "albumImageUri": "Magpie Pirates - Sample Collab 5/cover.png",
+    "audioUri": "Magpie Pirates - Sample Collab 5/Andreji Rublev - Sample Collab 5 - 01 The Moss Covers the Earth.mp3",
+  },
+  "13835280": {
+    "title": "Admirals Of Industry",
+    "artist": "Deepsurface",
+    "albumTitle": "Industrial Music For Industrial People",
+    "albumDate": "2019-01-01T00:00:00.000Z",
+    "albumImageUri": "Magpie Pirates - Industrial Music For Industrial People/cover.png",
+    "audioUri": "Magpie Pirates - Industrial Music For Industrial People/Deepsurface - Industrial Music For Industrial People - 04 Admirals Of Industry.mp3",
+  },
+  "14389788": {
+    "title": "Ghost in the Machine",
+    "artist": "TRBLMKR",
+    "albumTitle": "Ministry of Magpies",
+    "albumDate": "2021-01-01T00:00:00.000Z",
+    "albumImageUri": "Magpie Pirates - Ministry of Magpies/cover.png",
+    "audioUri": "Magpie Pirates - Ministry of Magpies/TRBLMKR - Ministry of Magpies - 02 Ghost in the Machine.mp3",
+  },
+  ...
+}
+```
+
+There is only one `metadata.json` master list. Playlists reference entries in this list.
+
+If that seems like a lot, don't worry. We can automatically generate this data from a directory of mp3s with the `ripper.ts` tool.
+
+## Playlists
+
+A "playlist" can represent a set of mostly unrelated songs or a cohesive album. 
+
+An `AsaPlaylist` object is simply an array of strings where every entry is a key of the `MasterList` object.
+
+A playlist might look like this:
+```ts
+const playlist = [
+  '10007019',
+  '13835280',
+  '14389788',
+];
+```
 
 # Usage
+
 ## Set up the tracks
 
 Put the albums (audio files) in some directory like `./data`. 
@@ -56,6 +105,12 @@ This project was written for `bun`; an alternative to NodeJS, NPM, TSC and more.
 [More on Bun](https://bun.com/)
 
 *Note: This will likely work with NodeJS / NPM / TSC as well.*
+
+## Install dependencies
+
+```sh
+bun install
+```
 
 ## Ripper
 
