@@ -214,6 +214,32 @@ class Asa {
     this.play();
     this.trackIndex = trackIndex;
   }
+  // NOTE:
+  // Listening for `ended` has some delay so use this instead
+  private onTimeUpdate(timestamp: HTMLElement): void {
+    if (!this.el.audioPlayer) return;
+    if (this.el.audioPlayer.currentTime >= this.el.audioPlayer.duration) {
+      this.el.audioPlayer.pause();
+      this.el.audioPlayer.currentTime = this.el.audioPlayer.duration;
+      this.nextTrack(this.trackIndex);
+    }
+    // Update scrubber
+    if (this.el.audioPlayer.duration > 0) {
+      const progress = (this.el.audioPlayer.currentTime / this.el.audioPlayer.duration) * 100;
+      if (this.el.scrubberFill) {
+        this.el.scrubberFill.style.width = `${progress}%`;
+      }
+    }
+    // Update timestamp
+    const current = Math.floor(this.el.audioPlayer.currentTime);
+    const duration = Math.floor(this.el.audioPlayer.duration);
+    const formatTime = (time: number) => {
+      const minutes = Math.floor(time / 60).toString().padStart(2, '0');
+      const seconds = (time % 60).toString().padStart(2, '0');
+      return `${minutes}:${seconds}`;
+    };
+    timestamp.innerText = `${formatTime(current)} / ${formatTime(duration)}`;
+  }
   private draw0(): void {
     if (!this.el.albumImage) return;
     if (!this.vis) return;
@@ -281,6 +307,33 @@ class Asa {
       default:
         this.draw0();
         break;
+    }
+  }
+  private setupAudioContext(): void {
+    if (this.el.albumImage && this.el.audioPlayer) {
+      const ctx = this.el.albumImage.getContext('2d');
+      const audioCtx = new (AudioContext)();
+      const source = audioCtx.createMediaElementSource(this.el.audioPlayer);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 32;//2048
+      source.connect(analyser);
+      analyser.connect(audioCtx.destination);
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      this.vis = {
+        ctx: ctx,
+        audioCtx: audioCtx,
+        analyser: analyser,
+        bufferLength: bufferLength,
+        dataArray: dataArray,
+        mode: 0,
+      };
+
+      this.el.audioPlayer.onplay = () => {
+        console.log("Resuming audio context");
+        audioCtx.resume();
+        this.draw();
+      };
     }
   }
   private initPlayer(playlist: AsaPlaylist): void {
@@ -381,9 +434,9 @@ class Asa {
     this.attachVolumeEvents(volumeControl);
     controlsElement.appendChild(volumeControl);
 
-    const timeStamp = document.createElement('div');
-    timeStamp.className = 'asa-timestamp';
-    timeStamp.innerText = '00:00 / 00:00';
+    const timestamp = document.createElement('div');
+    timestamp.className = 'asa-timestamp';
+    timestamp.innerText = '00:00 / 00:00';
 
     const controlsBtnWrap = document.createElement('div');
     controlsBtnWrap.className = 'asa-controls-btn-wrap';
@@ -396,63 +449,17 @@ class Asa {
     controlsElement.appendChild(scrubber);
     this.el.asa.appendChild(controlsElement);
     this.el.asa.appendChild(volumeControl);
-    this.el.asa.appendChild(timeStamp);
-    // NOTE:
-    // Listening for `ended` has some delay so use this instead
-    this.el.audioPlayer.addEventListener('timeupdate', () => {
-      if (!this.el.audioPlayer) return;
-      if (this.el.audioPlayer.currentTime >= this.el.audioPlayer.duration) {
-        this.el.audioPlayer.pause();
-        this.el.audioPlayer.currentTime = this.el.audioPlayer.duration;
-        this.nextTrack(this.trackIndex);
-      }
-      // Update scrubber
-      if (this.el.audioPlayer.duration > 0) {
-        const progress = (this.el.audioPlayer.currentTime / this.el.audioPlayer.duration) * 100;
-        if (this.el.scrubberFill) {
-          this.el.scrubberFill.style.width = `${progress}%`;
-        }
-      }
-      // Update timestamp
-      const current = Math.floor(this.el.audioPlayer.currentTime);
-      const duration = Math.floor(this.el.audioPlayer.duration);
-      const formatTime = (time: number) => {
-        const minutes = Math.floor(time / 60).toString().padStart(2, '0');
-        const seconds = (time % 60).toString().padStart(2, '0');
-        return `${minutes}:${seconds}`;
-      };
-      timeStamp.innerText = `${formatTime(current)} / ${formatTime(duration)}`;
-    });
+    this.el.asa.appendChild(timestamp);
     this.el.asa.appendChild(this.el.audioPlayer);
     // Finally, append to target
     this.el.target.appendChild(this.el.asa);
 
-    // Set up the audio context
-    if (this.el.albumImage) {
-      const ctx = this.el.albumImage.getContext('2d');
-      const audioCtx = new (AudioContext)();
-      const source = audioCtx.createMediaElementSource(this.el.audioPlayer);
-      const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 32;//2048
-      source.connect(analyser);
-      analyser.connect(audioCtx.destination);
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-      this.vis = {
-        ctx: ctx,
-        audioCtx: audioCtx,
-        analyser: analyser,
-        bufferLength: bufferLength,
-        dataArray: dataArray,
-        mode: 0,
-      };
+    // Setup audio event listeners
+    this.el.audioPlayer.addEventListener('timeupdate', this.onTimeUpdate.bind(this, timestamp));
 
-      this.el.audioPlayer.onplay = () => {
-        console.log("Resuming audio context");
-        audioCtx.resume();
-        this.draw();
-      };
-    }
+
+    // Set up the audio context
+    this.setupAudioContext();
   }
   async yeet(playlistRaw: AsaPlaylistRaw = []): Promise<void> {
     // We only want to grab the  master list once
