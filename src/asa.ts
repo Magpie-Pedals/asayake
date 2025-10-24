@@ -6,7 +6,6 @@ import type { TrackMeta } from '../types.ts';
 type PlaylistRaw = string[];
 type Playlist = TrackMeta[];
 
-
 type Elements = {
   target: HTMLElement;
   asa: HTMLElement | null;
@@ -141,27 +140,55 @@ class Asa {
       this.pause();
     }
   }
-  private onScrub(e: MouseEvent): void {
+  // SCRUBBER EVENTS
+  private handleScrub(e: PointerEvent, scrubber: HTMLElement): void {
     if (!this.el.audioPlayer) return;
-    const scrubber = e.currentTarget as HTMLElement;
     const rect = scrubber.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
+    const pointerX = e.clientX - rect.left;
     const width = rect.width;
-    const percent = clickX / width;
+    const percent = Math.max(0, Math.min(1, pointerX / width));
     const newTime = percent * this.el.audioPlayer.duration;
     this.el.audioPlayer.currentTime = newTime;
   }
-  private OnVolumeChange(e: MouseEvent): void {
+  private attachScrubberEvents(scrubber: HTMLElement): void {
+    const onPointerMove = (e: PointerEvent) => {
+      this.handleScrub(e, scrubber);
+    };
+    const onPointerUp = () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+    };
+    scrubber.addEventListener('pointerdown', (e: PointerEvent) => {
+      this.handleScrub(e, scrubber);
+      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', onPointerUp);
+    });
+  }
+  // VOLUME EVENTS
+  private handleVolume(e: PointerEvent, volumeControl: HTMLElement): void {
     if (!this.el.audioPlayer) return;
-    const volumeControl = e.currentTarget as HTMLElement;
     const rect = volumeControl.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
+    const pointerX = e.clientX - rect.left;
     const width = rect.width;
-    const percent = clickX / width;
+    const percent = Math.max(0, Math.min(1, pointerX / width));
     this.el.audioPlayer.volume = percent;
     if (this.el.volumeFill) {
       this.el.volumeFill.style.width = `${percent * 100}%`;
     }
+  }
+  private attachVolumeEvents(volumeControl: HTMLElement): void {
+    const onPointerMove = (e: PointerEvent) => {
+      this.handleVolume(e, volumeControl);
+    };
+    const onPointerUp = () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+    };
+    volumeControl.addEventListener('pointerdown', (e: PointerEvent) => {
+      this.handleVolume(e, volumeControl);
+      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', onPointerUp);
+    });
   }
   private onPlaylistClick(trackIndex: number): void {
     console.log(`Track ${trackIndex} clicked`);
@@ -173,7 +200,6 @@ class Asa {
     this.el.target.innerHTML = ''; // Clear existing content
     this.el.asa = document.createElement('div');
     this.el.asa.className = 'asa-player';
-
     const playlistElement = document.createElement('div');
     playlistElement.className = 'asa-playlist';
     for (const track of playlist) {
@@ -219,7 +245,7 @@ class Asa {
 
     const ppButton = document.createElement('button');
     ppButton.className = 'asa-btn asa-pp-button';
-    ppButton.innerText = 'PP';
+    ppButton.innerText = '|>';
     ppButton.onclick = this.onPPClick.bind(this);
 
     const prevButton = document.createElement('button');
@@ -237,7 +263,7 @@ class Asa {
     this.el.scrubberFill = document.createElement('div');
     this.el.scrubberFill.className = 'asa-scrubber-fill';
     scrubber.appendChild(this.el.scrubberFill);
-    scrubber.onclick = (e: MouseEvent) => { this.onScrub(e); };
+    this.attachScrubberEvents(scrubber);
     controlsElement.appendChild(scrubber);
 
     const volumeControl = document.createElement('div');
@@ -245,7 +271,7 @@ class Asa {
     this.el.volumeFill = document.createElement('div');
     this.el.volumeFill.className = 'asa-volume-fill';
     volumeControl.appendChild(this.el.volumeFill);
-    volumeControl.onmousemove = (e: MouseEvent) => { this.OnVolumeChange(e); };
+    this.attachVolumeEvents(volumeControl);
     controlsElement.appendChild(volumeControl);
 
     const timeStamp = document.createElement('div');

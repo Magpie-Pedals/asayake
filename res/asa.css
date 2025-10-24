@@ -23,6 +23,7 @@ body {
 
 .asa-player {
   background: var(--asa-c1);
+  user-select: none;
 }
 
 .asa-playlist {
