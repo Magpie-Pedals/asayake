@@ -29,7 +29,8 @@ body {
 .asa-playlist {
   margin-bottom: var(--asa-sh);
   border-radius: 0.5rem;
-  overflow: hidden;
+  max-height: 15rem;
+  overflow: scroll;
 }
 .asa-track {
   padding: 0.2rem;
@@ -65,6 +66,7 @@ body {
   cursor: pointer;
   width: calc(100% / 3);
   border-bottom: 0.2rem solid var(--asa-c3);
+  font-weight: bold;
 }
 .asa-btn:hover {
   background: var(--asa-c3);
