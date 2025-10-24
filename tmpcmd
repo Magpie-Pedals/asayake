@@ -1,0 +1,7 @@
+ffprobe -v quiet -show_entries format_tags=title,album,artist,track,comment, -of json yourfile.mp3
+
+ffprobe -v quiet -show_entries -of json yourfile.mp3
+ffprobe -v quiet -print_format json -show_format -show_streams
+
+ffprobe -v quiet -show_entries format_tags -of json
+ffprobe -v quiet -show_entries format_tags -of json
