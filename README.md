@@ -71,7 +71,7 @@ For testing we will serve it locally
 bunx http-server <dir>
 ```
 
-Navigate your browser to `localhost:8080/asayake` to view the player.
+Navigate your browser to `localhost:8080` to view the player.
 
 # Usage
 

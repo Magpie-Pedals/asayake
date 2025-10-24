@@ -23,7 +23,7 @@ fs.readdirSync(dirRes).forEach(file => {
 console.log('Copying built files to ' + dirOut);
 fs.readdirSync('dist').forEach(file => {
   const srcPath = path.join('dist', file);
-  const destPath = path.join(dirOut, 'asayake', file);
+  const destPath = path.join(dirOut, file);
   fs.mkdirSync(path.dirname(destPath), { recursive: true });
   const stat = fs.statSync(srcPath);
   if (stat.isFile()) {
