@@ -1,6 +1,10 @@
 {
   "name": "magpie",
   "private": true,
+  "scripts": {
+    "build": "bun build src/asa.ts --outdir=dist",
+    "test": "bun test"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },

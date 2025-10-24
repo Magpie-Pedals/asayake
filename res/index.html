@@ -1,0 +1,146 @@
+<button id="playlist1-btn">Load Playlist 1</button>
+<br>
+<button id="playlist2-btn">Load Playlist 2</button>
+<br>
+<div id="asa-element"></div>
+
+<script src="asa.js"></script>
+<style>
+:root {
+  --asa-c1: #222222;
+  --asa-c2: #444444;
+  --asa-c3: #666666;
+  --asa-c4: #feeefe;
+  --asa-c5: #ffeeff;
+
+  --asa-sh: 0.75rem;
+  --asa-sr: 5rem;
+}
+body {
+  background: var(--asa-c1);
+  color: var(--asa-c4);
+}
+#asa-element {
+  width: 360px;
+  border: 1px solid #444444;
+  font-family: Arial, sans-serif;
+  margin: 20px;
+  padding: 10px;
+}
+
+
+
+
+
+.asa-player {
+  background: var(--asa-c1);
+}
+
+.asa-playlist {
+  margin-bottom: var(--asa-sh);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+.asa-track {
+  padding: 0.2rem;
+  padding-left: 1rem;
+  cursor: pointer;
+  color: var(--asa-c5);
+}
+.asa-track:nth-of-type(even) {
+  background: var(--asa-c2);
+}
+.asa-track:nth-of-type(odd) {
+  background: var(--asa-c3);
+}
+.asa-track:hover {
+  background: var(--asa-c5);
+  color: var(--asa-c1);
+}
+.asa-track-playing {
+  background: var(--asa-c4) !important;
+  color: var(--asa-c1);
+  font-weight: bold;
+}
+
+.asa-btn {
+  background: var(--asa-c2);
+  border: none;
+  color: var(--asa-c4);
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  width: calc(100% / 3);
+  border-bottom: 0.2rem solid var(--asa-c3);
+}
+.asa-btn:hover {
+  background: var(--asa-c3);
+}
+.asa-now-playing {
+  background: var(--asa-c2);
+  padding: 1rem;
+  border-bottom: 0.2rem solid var(--asa-c3);
+  border-radius: 1rem;
+  margin-bottom: var(--asa-sh);
+}
+.asa-now-playing-title {
+  font-style: italic;
+}
+.asa-now-playing-artist {
+  font-weight: bold;
+}
+.asa-now-playing-album {
+  opacity: 0.5;
+}
+
+.asa-album-image {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  margin-bottom: var(--asa-sh);
+  border-radius: 1rem;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--asa-c2);
+  margin-bottom: var(--asa-sh);
+}
+
+/* Highlights on play */
+.asa-playing .asa-pp-button {
+  background: var(--asa-c4);
+  color: var(--asa-c1);
+}
+
+.asa-controls {
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.asa-player input[type="range"] {
+  display: none;
+}
+
+.asa-scrubber {
+  width: 100%;
+  height: 1rem;
+  background: var(--asa-c2);
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+}
+.asa-scrubber:hover {
+  background: var(--asa-c3);
+}
+.asa-scrubber-fill {
+  background: var(--asa-c4);
+  width: 1%;
+  min-width: 1%;
+  height: 100%;
+}
+
+.asa-timestamp {
+  width: 100%;
+  text-align: right;
+  color: var(--asa-c3);
+}
+
+</style>

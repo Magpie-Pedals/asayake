@@ -104,11 +104,11 @@ class Ripper {
   async run(dir: string, exitOnError: boolean = true): Promise<void> {
     this.exitOnError = exitOnError;
     let recordRaw: RecordRaw[] = [];
-    fs.mkdirSync(`${dir}/metadata`, { recursive: true });
+    fs.mkdirSync(`dist/metadata`, { recursive: true });
     recordRaw = await this.traverseAndProbe(dir, recordRaw);
-    fs.writeFileSync(`${dir}/metadata/rawdata.json`, JSON.stringify(recordRaw, null, 2));
+    fs.writeFileSync(`dist/metadata/rawdata.json`, JSON.stringify(recordRaw, null, 2));
     const playlist = this.process(recordRaw);
-    fs.writeFileSync(`${dir}/metadata/metadata.json`, JSON.stringify(playlist, null, 2));
+    fs.writeFileSync(`dist/metadata/metadata.json`, JSON.stringify(playlist, null, 2));
   }
 }
 
@@ -117,5 +117,3 @@ const dir = process.argv[2] || "data";
 await new Ripper().run(dir, true);
 const end = Date.now();
 console.log(`Ripping completed in ${(end - start) / 1000} seconds.`);
-// console.log('Metadata written to ./metadata/metadata.json');
-// console.log('Raw data written to ./metadata/rawdata.json');
