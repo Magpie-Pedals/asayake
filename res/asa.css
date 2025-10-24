@@ -135,6 +135,7 @@ body {
   background-position: center;
   background-color: var(--asa-c2);
   margin-bottom: var(--asa-sh);
+  cursor: pointer;
 }
 
 /* Highlights on play */

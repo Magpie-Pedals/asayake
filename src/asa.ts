@@ -253,23 +253,6 @@ class Asa {
     if (!this.vis.ctx) return;
     this.vis.ctx.clearRect(0, 0, this.el.albumImage!.width, this.el.albumImage!.height);
     const yScale = 0.5;
-    for (let i = 0; i < this.vis.bufferLength; i++) {
-      const value = this.vis.dataArray[i];
-      if (!value) continue;
-      const percent = value / 256;
-      const height = yScale * this.el.albumImage.height * percent;
-      const offset = this.el.albumImage.height - height - 1;
-      const barWidth = this.el.albumImage.width / this.vis.bufferLength;
-      this.vis.ctx.fillStyle = 'rgba(255,255,255, 0.5)';
-      this.vis.ctx.fillRect(i * barWidth, offset, barWidth, height);
-    }
-  }
-  private draw2(): void {
-    if (!this.el.albumImage) return;
-    if (!this.vis) return;
-    if (!this.vis.ctx) return;
-    this.vis.ctx.clearRect(0, 0, this.el.albumImage!.width, this.el.albumImage!.height);
-    const yScale = 0.5;
     const half = Math.floor(this.vis.bufferLength / 2);
     const barWidth = this.el.albumImage.width / this.vis.bufferLength;
 
@@ -288,6 +271,23 @@ class Asa {
       this.vis.ctx.fillStyle = 'rgba(255,255,255, 0.5)';
       this.vis.ctx.fillRect(xLeft, offset, barWidth, height);
       this.vis.ctx.fillRect(xRight, offset, barWidth, height);
+    }
+  }
+  private draw2(): void {
+    if (!this.el.albumImage) return;
+    if (!this.vis) return;
+    if (!this.vis.ctx) return;
+    this.vis.ctx.clearRect(0, 0, this.el.albumImage!.width, this.el.albumImage!.height);
+    const yScale = 0.5;
+    for (let i = 0; i < this.vis.bufferLength; i++) {
+      const value = this.vis.dataArray[i];
+      if (!value) continue;
+      const percent = value / 256;
+      const height = yScale * this.el.albumImage.height * percent;
+      const offset = this.el.albumImage.height - height - 1;
+      const barWidth = this.el.albumImage.width / this.vis.bufferLength;
+      this.vis.ctx.fillStyle = 'rgba(255,255,255, 0.5)';
+      this.vis.ctx.fillRect(i * barWidth, offset, barWidth, height);
     }
   }
   private draw(): void {
@@ -315,7 +315,7 @@ class Asa {
       const audioCtx = new (AudioContext)();
       const source = audioCtx.createMediaElementSource(this.el.audioPlayer);
       const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 32;//2048
+      analyser.fftSize = 128;//2048
       source.connect(analyser);
       analyser.connect(audioCtx.destination);
       const bufferLength = analyser.frequencyBinCount;
@@ -326,7 +326,7 @@ class Asa {
         analyser: analyser,
         bufferLength: bufferLength,
         dataArray: dataArray,
-        mode: 0,
+        mode: 1,// 0 is none
       };
 
       this.el.audioPlayer.onplay = () => {
@@ -456,7 +456,6 @@ class Asa {
 
     // Setup audio event listeners
     this.el.audioPlayer.addEventListener('timeupdate', this.onTimeUpdate.bind(this, timestamp));
-
 
     // Set up the audio context
     this.setupAudioContext();
