@@ -181,7 +181,10 @@ class Asa {
   }
   private onAlbumImageClick(): void {
     if (!this.vis) return;
-    this.vis.mode = (this.vis.mode + 1) % 4;
+    if (this.el.audioPlayer && this.el.audioPlayer.paused) {
+      this.play();
+    }
+    this.vis.mode = (this.vis.mode + 1) % 5;
     console.log(`Visualization mode changed to ${this.vis.mode}`);
     this.updateVisMode();
   }
