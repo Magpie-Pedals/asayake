@@ -19,12 +19,21 @@ type AsaElements = {
   tracks: HTMLElement[] | null;
 };
 
+type AsaVis = {
+  ctx: CanvasRenderingContext2D | null;
+  audioCtx: AudioContext;
+  analyser: AnalyserNode;
+  bufferLength: number;
+  dataArray: Uint8Array<ArrayBuffer>;
+}
+
 class Asa {
   private el: AsaElements;
   private master: AsaMasterList | null = null;
   private playlist: AsaPlaylist = [];
   private trackIndex: number = 0;
   private isShuffle: boolean = false;
+  private vis: AsaVis | null = null;
   constructor(elementId: string) {
     const element = document.getElementById(elementId);
     if (!element) {
@@ -200,6 +209,28 @@ class Asa {
     this.play();
     this.trackIndex = trackIndex;
   }
+  private draw(): void {
+    console.log("Drawing visualization");
+    if (!this.el.albumImage) return;
+    if (!this.vis) return;
+    if (!this.vis.ctx) return;
+    requestAnimationFrame(this.draw.bind(this));
+    this.vis.analyser.getByteFrequencyData(this.vis.dataArray);
+
+    this.vis.ctx.clearRect(0, 0, this.el.albumImage!.width, this.el.albumImage!.height);
+    const yScale = 0.5;
+    for (let i = 0; i < this.vis.bufferLength; i++) {
+      const value = this.vis.dataArray[i];
+      if (!value) continue;
+      const percent = value / 256;
+      const height = yScale * this.el.albumImage.height * percent;
+      const offset = this.el.albumImage.height - height - 1;
+      const barWidth = this.el.albumImage.width / this.vis.bufferLength;
+      // this.vis.ctx.fillStyle = 'rgb(' + (value + 100) + ',50,50)';
+      this.vis.ctx.fillStyle = 'rgba(255,255,255, 0.5)';
+      this.vis.ctx.fillRect(i * barWidth, offset, barWidth, height);
+    }
+  }
   private initPlayer(playlist: AsaPlaylist): void {
     this.el.target.innerHTML = ''; // Clear existing content
     this.el.asa = document.createElement('div');
@@ -344,38 +375,31 @@ class Asa {
     this.el.target.appendChild(this.el.asa);
 
     // Set up the audio context
-    const ctx = this.el.albumImage.getContext('2d');
-    const audioCtx = new (AudioContext)();
-    const source = audioCtx.createMediaElementSource(this.el.audioPlayer);
-    const analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 2048;
-    source.connect(analyser);
-    analyser.connect(audioCtx.destination);
-    const bufferLength = analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
+    if (this.el.albumImage) {
+      const ctx = this.el.albumImage.getContext('2d');
+      const audioCtx = new (AudioContext)();
+      const source = audioCtx.createMediaElementSource(this.el.audioPlayer);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 32;//2048
+      source.connect(analyser);
+      analyser.connect(audioCtx.destination);
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      const vis: AsaVis = {
+        ctx: ctx,
+        audioCtx: audioCtx,
+        analyser: analyser,
+        bufferLength: bufferLength,
+        dataArray: dataArray,
+      };
+      this.vis = vis;
 
-    const draw = () => {
-      if (!this.el.albumImage) return;
-      if (!ctx) return;
-      requestAnimationFrame(draw);
-      analyser.getByteFrequencyData(dataArray);
-
-      ctx.clearRect(0, 0, this.el.albumImage!.width, this.el.albumImage!.height);
-      for (let i = 0; i < bufferLength; i++) {
-        const value = dataArray[i];
-        if (!value) continue;
-        const percent = value / 256;
-        const height = this.el.albumImage.height * percent;
-        const offset = this.el.albumImage.height - height - 1;
-        const barWidth = this.el.albumImage.width / bufferLength;
-        ctx.fillStyle = 'rgb(' + (value + 100) + ',50,50)';
-        ctx.fillRect(i * barWidth, offset, barWidth, height);
-      }
+      this.el.audioPlayer.onplay = () => {
+        console.log("Resuming audio context");
+        audioCtx.resume();
+        this.draw();
+      };
     }
-    this.el.audioPlayer.onplay = () => {
-      audioCtx.resume();
-      draw();
-    };
   }
   async yeet(playlistRaw: AsaPlaylistRaw = []): Promise<void> {
     // We only want to grab the  master list once
