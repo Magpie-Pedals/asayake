@@ -25,6 +25,7 @@ type AsaVis = {
   analyser: AnalyserNode;
   bufferLength: number;
   dataArray: Uint8Array<ArrayBuffer>;
+  mode: number;
 }
 
 class Asa {
@@ -150,6 +151,10 @@ class Asa {
       this.pause();
     }
   }
+  private onAlbumImageClick(): void {
+    if (!this.vis) return;
+    this.vis.mode = (this.vis.mode + 1) % 3;
+  }
   private onShuffleClick(): void {
     this.isShuffle = !this.isShuffle;
   }
@@ -209,14 +214,17 @@ class Asa {
     this.play();
     this.trackIndex = trackIndex;
   }
-  private draw(): void {
-    console.log("Drawing visualization");
+  private draw0(): void {
     if (!this.el.albumImage) return;
     if (!this.vis) return;
     if (!this.vis.ctx) return;
-    requestAnimationFrame(this.draw.bind(this));
-    this.vis.analyser.getByteFrequencyData(this.vis.dataArray);
-
+    this.vis.ctx.clearRect(0, 0, this.el.albumImage!.width, this.el.albumImage!.height);
+    return;
+  }
+  private draw1(): void {
+    if (!this.el.albumImage) return;
+    if (!this.vis) return;
+    if (!this.vis.ctx) return;
     this.vis.ctx.clearRect(0, 0, this.el.albumImage!.width, this.el.albumImage!.height);
     const yScale = 0.5;
     for (let i = 0; i < this.vis.bufferLength; i++) {
@@ -226,9 +234,53 @@ class Asa {
       const height = yScale * this.el.albumImage.height * percent;
       const offset = this.el.albumImage.height - height - 1;
       const barWidth = this.el.albumImage.width / this.vis.bufferLength;
-      // this.vis.ctx.fillStyle = 'rgb(' + (value + 100) + ',50,50)';
       this.vis.ctx.fillStyle = 'rgba(255,255,255, 0.5)';
       this.vis.ctx.fillRect(i * barWidth, offset, barWidth, height);
+    }
+  }
+  private draw2(): void {
+    if (!this.el.albumImage) return;
+    if (!this.vis) return;
+    if (!this.vis.ctx) return;
+    this.vis.ctx.clearRect(0, 0, this.el.albumImage!.width, this.el.albumImage!.height);
+    const yScale = 0.5;
+    const half = Math.floor(this.vis.bufferLength / 2);
+    const barWidth = this.el.albumImage.width / this.vis.bufferLength;
+
+    for (let i = 0; i < half; i++) {
+      const value = this.vis.dataArray[i];
+      if (!value) continue;
+      const percent = value / 256;
+      const height = yScale * this.el.albumImage.height * percent;
+      const offset = this.el.albumImage.height - height - 1;
+
+      // Left side
+      let xLeft = i * barWidth;
+      // Right side (mirrored)
+      let xRight = this.el.albumImage.width - (i + 1) * barWidth;
+
+      this.vis.ctx.fillStyle = 'rgba(255,255,255, 0.5)';
+      this.vis.ctx.fillRect(xLeft, offset, barWidth, height);
+      this.vis.ctx.fillRect(xRight, offset, barWidth, height);
+    }
+  }
+  private draw(): void {
+    if (!this.vis) return;
+    requestAnimationFrame(this.draw.bind(this));
+    this.vis.analyser.getByteFrequencyData(this.vis.dataArray);
+    switch (this.vis.mode) {
+      case 0:
+        this.draw0();
+        break;
+      case 1:
+        this.draw1();
+        break;
+      case 2:
+        this.draw2();
+        break;
+      default:
+        this.draw0();
+        break;
     }
   }
   private initPlayer(playlist: AsaPlaylist): void {
@@ -273,6 +325,7 @@ class Asa {
     this.el.albumImage = document.createElement('canvas');
     this.el.albumImage.className = 'asa-album-image';
     this.el.asa.appendChild(this.el.albumImage);
+    this.el.albumImage.onclick = this.onAlbumImageClick.bind(this);
 
     // Add the control elements
     const controlsElement = document.createElement('div');
@@ -385,14 +438,14 @@ class Asa {
       analyser.connect(audioCtx.destination);
       const bufferLength = analyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
-      const vis: AsaVis = {
+      this.vis = {
         ctx: ctx,
         audioCtx: audioCtx,
         analyser: analyser,
         bufferLength: bufferLength,
         dataArray: dataArray,
+        mode: 0,
       };
-      this.vis = vis;
 
       this.el.audioPlayer.onplay = () => {
         console.log("Resuming audio context");
