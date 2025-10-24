@@ -15,7 +15,7 @@ type AsaElements = {
   nowPlayingAlbum: HTMLElement | null;
   scrubberFill: HTMLElement | null;
   volumeFill: HTMLElement | null;
-  albumImage: HTMLImageElement | null;
+  albumImage: HTMLCanvasElement | null;
   tracks: HTMLElement[] | null;
 };
 
@@ -93,20 +93,20 @@ class Asa {
     if (this.el.albumImage) {
       // Check if the image exists by making a HEAD request
       if (!track.albumImageUri) {
-        this.el.albumImage.src = 'placeholder.png';
+        this.el.albumImage.style.backgroundImage = 'url("placeholder.png")';
       }
       else {
         fetch(track.albumImageUri, { method: 'HEAD' })
           .then((response) => {
             if (response.ok) {
-              this.el.albumImage!.src = track.albumImageUri;
+              this.el.albumImage!.style.backgroundImage = `url("${track.albumImageUri}")`;
             }
             else {
-              this.el.albumImage!.src = 'placeholder.png';
+              this.el.albumImage!.style.backgroundImage = 'url("placeholder.png")';
             }
           })
           .catch(() => {
-            this.el.albumImage!.src = 'placeholder.png';
+            this.el.albumImage!.style.backgroundImage = 'url("placeholder.png")';
           });
       }
     }
@@ -239,7 +239,7 @@ class Asa {
     this.el.asa.appendChild(nowPlayingElement);
 
     // Append the album image display
-    this.el.albumImage = document.createElement('img');
+    this.el.albumImage = document.createElement('canvas');
     this.el.albumImage.className = 'asa-album-image';
     this.el.asa.appendChild(this.el.albumImage);
 
@@ -342,6 +342,40 @@ class Asa {
     this.el.asa.appendChild(this.el.audioPlayer);
     // Finally, append to target
     this.el.target.appendChild(this.el.asa);
+
+    // Set up the audio context
+    const ctx = this.el.albumImage.getContext('2d');
+    const audioCtx = new (AudioContext)();
+    const source = audioCtx.createMediaElementSource(this.el.audioPlayer);
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 2048;
+    source.connect(analyser);
+    analyser.connect(audioCtx.destination);
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    const draw = () => {
+      if (!this.el.albumImage) return;
+      if (!ctx) return;
+      requestAnimationFrame(draw);
+      analyser.getByteFrequencyData(dataArray);
+
+      ctx.clearRect(0, 0, this.el.albumImage!.width, this.el.albumImage!.height);
+      for (let i = 0; i < bufferLength; i++) {
+        const value = dataArray[i];
+        if (!value) continue;
+        const percent = value / 256;
+        const height = this.el.albumImage.height * percent;
+        const offset = this.el.albumImage.height - height - 1;
+        const barWidth = this.el.albumImage.width / bufferLength;
+        ctx.fillStyle = 'rgb(' + (value + 100) + ',50,50)';
+        ctx.fillRect(i * barWidth, offset, barWidth, height);
+      }
+    }
+    this.el.audioPlayer.onplay = () => {
+      audioCtx.resume();
+      draw();
+    };
   }
   async yeet(playlistRaw: AsaPlaylistRaw = []): Promise<void> {
     // We only want to grab the  master list once
