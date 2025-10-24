@@ -74,7 +74,7 @@ class Ripper {
     return recordRaw;
   }
   // Process raw records into final data
-  private process(recordRaw: AsaRecordRaw[]) {
+  private process(recordRaw: AsaRecordRaw[], dir: string): AsaMasterList {
     const listing: AsaMasterList = {};
     for (const record of recordRaw) {
       // We use a hash of some meta data to generate a unique key for each track
@@ -86,7 +86,21 @@ class Ripper {
       }
       const audioUri = record.filename.split(path.sep).slice(1).join('/');
       // NOTE: The albumImageUri is assumed to be in the same directory as the audio file
-      const albumImageUri = audioUri.split(path.sep)[0] + '/cover.png';
+      // and named either cover.jpg or cover.png
+      // If jpg cant be found, png is used
+      // If png doesnt exist we fall back to the placeholder image in the app
+      const albumImageUriJpg = audioUri.split(path.sep)[0] + '/cover.jpg';
+      const albumImageUriPng = audioUri.split(path.sep)[0] + '/cover.png';
+      let albumImageUri = albumImageUriPng;
+      const searchPath = path.join(dir, albumImageUriJpg);
+      console.log(`Checking for album art at ${searchPath}`);
+      if (fs.existsSync(searchPath)) {
+        console.log(`Found JPG album art at ${searchPath}`);
+        albumImageUri = albumImageUriJpg;
+      }
+      else {
+        console.log('JPG not found falling back to PNG');
+      }
       listing[key] = {
         title: record.tags.title,
         artist: record.tags.artist,
@@ -108,7 +122,7 @@ class Ripper {
     fs.mkdirSync(`dist/metadata`, { recursive: true });
     recordRaw = await this.traverseAndProbe(dir, recordRaw);
     fs.writeFileSync(`dist/metadata/rawdata.json`, JSON.stringify(recordRaw, null, 2));
-    const playlist = this.process(recordRaw);
+    const playlist = this.process(recordRaw, dir);
     fs.writeFileSync(`dist/metadata/metadata.json`, JSON.stringify(playlist, null, 2));
   }
 }
