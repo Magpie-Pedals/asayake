@@ -24,6 +24,7 @@ class Asa {
   private master: AsaMasterList | null = null;
   private playlist: AsaPlaylist = [];
   private trackIndex: number = 0;
+  private isShuffle: boolean = false;
   constructor(elementId: string) {
     const element = document.getElementById(elementId);
     if (!element) {
@@ -140,6 +141,9 @@ class Asa {
       this.pause();
     }
   }
+  private onShuffleClick(): void {
+    this.isShuffle = !this.isShuffle;
+  }
   // SCRUBBER EVENTS
   private handleScrub(e: PointerEvent, scrubber: HTMLElement): void {
     if (!this.el.audioPlayer) return;
@@ -243,20 +247,39 @@ class Asa {
     const controlsElement = document.createElement('div');
     controlsElement.className = 'asa-controls';
 
+    const shuffleButton = document.createElement('button');
+    shuffleButton.className = 'asa-btn asa-shuffle-button';
+    shuffleButton.onclick = this.onShuffleClick.bind(this);
+    const shuffleIcon = document.createElement('span');
+    shuffleIcon.className = 'asa-shuffle-icon';
+    shuffleButton.appendChild(shuffleIcon);
+
     const ppButton = document.createElement('button');
     ppButton.className = 'asa-btn asa-pp-button';
-    ppButton.innerText = '|>';
     ppButton.onclick = this.onPPClick.bind(this);
+    const ppIcon = document.createElement('span');
+    ppIcon.className = 'asa-pp-icon';
+    ppButton.appendChild(ppIcon);
 
     const prevButton = document.createElement('button');
     prevButton.className = 'asa-btn asa-prev-button';
-    prevButton.innerText = '<<';
     prevButton.onclick = () => this.prevTrack(this.trackIndex);
+    const prevIcon = document.createElement('span');
+    prevIcon.className = 'asa-prev-icon';
+    prevButton.appendChild(prevIcon);
 
     const nextButton = document.createElement('button');
     nextButton.className = 'asa-btn asa-next-button';
-    nextButton.innerText = '>>';
     nextButton.onclick = () => this.nextTrack(this.trackIndex);
+    const nextIcon = document.createElement('span');
+    nextIcon.className = 'asa-next-icon';
+    nextButton.appendChild(nextIcon);
+
+    const downloadButton = document.createElement('button');
+    downloadButton.className = 'asa-btn asa-download-button';
+    const downloadIcon = document.createElement('span');
+    downloadIcon.className = 'asa-download-icon';
+    downloadButton.appendChild(downloadIcon);
 
     const scrubber = document.createElement('div');
     scrubber.className = 'asa-scrubber';
@@ -280,9 +303,11 @@ class Asa {
 
     const controlsBtnWrap = document.createElement('div');
     controlsBtnWrap.className = 'asa-controls-btn-wrap';
+    controlsBtnWrap.appendChild(shuffleButton);
     controlsBtnWrap.appendChild(prevButton);
     controlsBtnWrap.appendChild(ppButton);
     controlsBtnWrap.appendChild(nextButton);
+    controlsBtnWrap.appendChild(downloadButton);
     controlsElement.appendChild(controlsBtnWrap);
     controlsElement.appendChild(scrubber);
     this.el.asa.appendChild(controlsElement);
