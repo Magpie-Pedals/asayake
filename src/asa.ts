@@ -28,7 +28,16 @@ type AsaVis = {
   dataArrayL: Uint8Array<ArrayBuffer>;
   dataArrayR: Uint8Array<ArrayBuffer>;
   dataArrayM: Uint8Array<ArrayBuffer>;
+  timeDomainDataL: Uint8Array<ArrayBuffer>;
+  timeDomainDataR: Uint8Array<ArrayBuffer>;
+  rmsLRaw: number;
+  rmsRRaw: number;
+  rmsMRaw: number;
+  rmsL: number;
+  rmsR: number;
+  rmsM: number;
   mode: number;
+  img: HTMLImageElement | null;
   fn: () => void;
 }
 
@@ -108,19 +117,23 @@ class Asa {
       // Check if the image exists by making a HEAD request
       if (!track.albumImageUri) {
         this.el.albumImage.style.backgroundImage = 'url("placeholder.png")';
+        this.vis!.img!.src = 'placeholder.png';
       }
       else {
         fetch(track.albumImageUri, { method: 'HEAD' })
           .then((response) => {
             if (response.ok) {
               this.el.albumImage!.style.backgroundImage = `url("${track.albumImageUri}")`;
+              this.vis!.img!.src = track.albumImageUri;
             }
             else {
               this.el.albumImage!.style.backgroundImage = 'url("placeholder.png")';
+              this.vis!.img!.src = 'placeholder.png';
             }
           })
           .catch(() => {
             this.el.albumImage!.style.backgroundImage = 'url("placeholder.png")';
+            this.vis!.img!.src = 'placeholder.png';
           });
       }
     }
@@ -162,36 +175,40 @@ class Asa {
         this.vis.fn = this.draw0.bind(this);
         break;
       case 1:
-        this.setupAudioContext(64);
+        this.setupVisContext(64);
         this.vis.fn = this.draw1.bind(this);
         break;
       case 2:
-        this.setupAudioContext(2048);
+        this.setupVisContext(2048);
         this.vis.fn = this.draw1.bind(this);
         break;
       case 3:
-        this.setupAudioContext(64);
+        this.setupVisContext(64);
         this.vis.fn = this.draw2.bind(this);
         break;
       case 4:
-        this.setupAudioContext(2048);
+        this.setupVisContext(2048);
         this.vis.fn = this.draw2.bind(this);
         break;
       case 5:
-        this.setupAudioContext(512);
+        this.setupVisContext(512);
         this.vis.fn = this.draw3.bind(this);
         break;
       case 6:
-        this.setupAudioContext(512);
+        this.setupVisContext(512);
         this.vis.fn = this.draw4.bind(this);
         break;
       case 7:
-        this.setupAudioContext(512);
+        this.setupVisContext(512);
         this.vis.fn = this.draw5.bind(this);
         break;
       case 8:
-        this.setupAudioContext(512);
+        this.setupVisContext(512);
         this.vis.fn = this.draw6.bind(this);
+        break;
+      case 9:
+        this.setupVisContext(32);
+        this.vis.fn = this.draw7.bind(this);
         break;
       default:
         this.vis.fn = this.draw0.bind(this);
@@ -203,7 +220,7 @@ class Asa {
     if (this.el.audioPlayer && this.el.audioPlayer.paused) {
       this.play();
     }
-    this.vis.mode = (this.vis.mode + 1) % 9;
+    this.vis.mode = (this.vis.mode + 1) % 10;
     console.log(`Visualization mode changed to ${this.vis.mode}`);
     this.updateVisMode();
   }
@@ -297,7 +314,6 @@ class Asa {
     if (!this.vis) return;
     if (!this.vis.ctx) return;
     this.vis.ctx.clearRect(0, 0, this.el.albumImage!.width, this.el.albumImage!.height);
-    return;
   }
   private draw1(): void {
     if (!this.el.albumImage) return;
@@ -496,6 +512,41 @@ class Asa {
       ctx.fillRect(halfWidth, y, barLength, barHeight);
     }
   }
+  private draw7(): void {
+    if (!this.el.albumImage) return;
+    if (!this.vis) return;
+    if (!this.vis.ctx) return;
+    this.vis.ctx.clearRect(0, 0, this.el.albumImage!.width, this.el.albumImage!.height);
+    // Check if the image is loaded
+    // Draw vis.img at center
+    const img = this.vis.img;
+    if (!img) return;
+    const canvas = this.el.albumImage;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    const ctx = this.vis.ctx;
+    let drawWidth = canvas.width;
+    let drawHeight = canvas.height;
+    const x = (canvas.width - drawWidth) / 2;
+    const y = (canvas.height - drawHeight) / 2;
+    ctx.drawImage(img, x, y, drawWidth, drawHeight);
+    const imageData = ctx.getImageData(0, 0, drawWidth, drawHeight);
+    const data = imageData.data;
+    // console.log(`RMS M: ${this.vis.rmsM}, L: ${this.vis.rmsL}, R: ${this.vis.rmsR}`);
+    const min = 0.3;
+    for (let i = 0; i < data.length; i += 4) {
+      // NOTE: data[i] is red, data[i+1] is green, data[i+2] is blue, data[i+3] is alpha
+      // data[i]! *= Math.max(min, this.vis.rmsM);
+      // data[i + 1]! *= Math.max(min, this.vis.rmsL);
+      // data[i + 2]! *= Math.max(min, this.vis.rmsR);
+      //
+      data[i]! *= min + this.vis.rmsM;
+      data[i + 1]! *= min + this.vis.rmsL;
+      data[i + 2]! *= min + this.vis.rmsR;
+    }
+    ctx.putImageData(imageData, 0, 0);
+  }
   private draw(): void {
     if (!this.vis) return;
     requestAnimationFrame(this.draw.bind(this));
@@ -509,9 +560,28 @@ class Asa {
         this.vis.dataArrayM[i] = (l + r) / 2;
       }
     }
+    this.vis.analyserL.getByteTimeDomainData(this.vis.timeDomainDataL);
+    this.vis.analyserR.getByteTimeDomainData(this.vis.timeDomainDataR);
+    // Get the rms
+    const rms = (data: Uint8Array) => {
+      let sum = 0;
+      for (let i = 0; i < data.length; i++) {
+        const v = ((data?.[i] ?? 128) - 128) / 128; // Normalize to [-1, 1]
+        sum += v * v;
+      }
+      return Math.sqrt(sum / data.length);
+    };
+    this.vis.rmsLRaw = rms(this.vis.timeDomainDataL);
+    this.vis.rmsRRaw = rms(this.vis.timeDomainDataR);
+    // Merge rms
+    this.vis.rmsMRaw = (this.vis.rmsLRaw + this.vis.rmsRRaw) / 2;
+    const alpha = 0.2; // Smoothing factor (0 < alpha < 1)
+    this.vis.rmsL = this.vis.rmsL * (1 - alpha) + this.vis.rmsLRaw * alpha;
+    this.vis.rmsR = this.vis.rmsR * (1 - alpha) + this.vis.rmsRRaw * alpha;
+    this.vis.rmsM = this.vis.rmsM * (1 - alpha) + this.vis.rmsMRaw * alpha;
     this.vis.fn();
   }
-  private setupAudioContext(fftSize: number = 2048): void {
+  private setupVisContext(fftSize: number = 2048): void {
     if (this.el.albumImage && this.el.audioPlayer) {
       const ctx = this.el.albumImage.getContext('2d');
       if (this.vis && this.vis.audioCtx) {
@@ -546,9 +616,20 @@ class Asa {
         dataArrayL: dataArrayL,
         dataArrayR: dataArrayR,
         dataArrayM: dataArrayM,
+        timeDomainDataL: new Uint8Array(bufferLength),
+        timeDomainDataR: new Uint8Array(bufferLength),
+        rmsLRaw: 0,
+        rmsRRaw: 0,
+        rmsMRaw: 0,
+        rmsL: 0,
+        rmsR: 0,
+        rmsM: 0,
         mode: mode,
+        img: this.vis?.img ?? new Image(), // Will be set later
         fn: () => { },// Will be set later
       };
+
+      // this.vis.img!.src = 'placeholder.png'; // Default image
 
       this.el.audioPlayer.onplay = () => {
         console.log("Resuming audio context");
@@ -677,11 +758,6 @@ class Asa {
 
     // Setup audio event listeners
     this.el.audioPlayer.addEventListener('timeupdate', this.onTimeUpdate.bind(this, timestamp));
-
-    // Set up the audio context
-    this.setupAudioContext();
-    // Make sure we have the right draw function
-    this.updateVisMode();
   }
   async yeet(playlistRaw: AsaPlaylistRaw = []): Promise<void> {
     // We only want to grab the  master list once
@@ -700,6 +776,10 @@ class Asa {
     console.log("Playlist:", this.playlist);
     this.initPlayer(this.playlist);
     this.updateTrack(0);
+    // Set up the audio context
+    this.setupVisContext();
+    // Make sure we have the right draw function
+    this.updateVisMode();
   }
 }
 
