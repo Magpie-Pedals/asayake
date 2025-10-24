@@ -12,9 +12,11 @@ data/
 -- album 1/
 ---- track 1.mp3
 ---- track 2.mp3
+---- cover.png
 -- album 1/
 ---- track 1.mp3
 ---- track 2.mp3
+---- cover.png
 ```
 
 ## Bun
