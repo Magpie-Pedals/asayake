@@ -22,9 +22,12 @@ type AsaElements = {
 type AsaVis = {
   ctx: CanvasRenderingContext2D | null;
   audioCtx: AudioContext;
-  analyser: AnalyserNode;
+  analyserL: AnalyserNode;
+  analyserR: AnalyserNode;
   bufferLength: number;
-  dataArray: Uint8Array<ArrayBuffer>;
+  dataArrayL: Uint8Array<ArrayBuffer>;
+  dataArrayR: Uint8Array<ArrayBuffer>;
+  dataArrayM: Uint8Array<ArrayBuffer>;
   mode: number;
   fn: () => void;
 }
@@ -174,8 +177,24 @@ class Asa {
         this.setupAudioContext(2048);
         this.vis.fn = this.draw2.bind(this);
         break;
+      case 5:
+        this.setupAudioContext(512);
+        this.vis.fn = this.draw3.bind(this);
+        break;
+      case 6:
+        this.setupAudioContext(512);
+        this.vis.fn = this.draw4.bind(this);
+        break;
+      case 7:
+        this.setupAudioContext(512);
+        this.vis.fn = this.draw5.bind(this);
+        break;
+      case 8:
+        this.setupAudioContext(512);
+        this.vis.fn = this.draw6.bind(this);
+        break;
       default:
-        this.vis.fn = this.draw1.bind(this);
+        this.vis.fn = this.draw0.bind(this);
         break;
     }
   }
@@ -184,7 +203,7 @@ class Asa {
     if (this.el.audioPlayer && this.el.audioPlayer.paused) {
       this.play();
     }
-    this.vis.mode = (this.vis.mode + 1) % 5;
+    this.vis.mode = (this.vis.mode + 1) % 9;
     console.log(`Visualization mode changed to ${this.vis.mode}`);
     this.updateVisMode();
   }
@@ -290,7 +309,7 @@ class Asa {
     const barWidth = this.el.albumImage.width / this.vis.bufferLength;
 
     for (let i = 0; i < half; i++) {
-      const value = this.vis.dataArray[i];
+      const value = this.vis.dataArrayM[i];
       if (!value) continue;
       const percent = value / 256;
       const height = yScale * this.el.albumImage.height * percent;
@@ -313,7 +332,7 @@ class Asa {
     this.vis.ctx.clearRect(0, 0, this.el.albumImage!.width, this.el.albumImage!.height);
     const yScale = 0.5;
     for (let i = 0; i < this.vis.bufferLength; i++) {
-      const value = this.vis.dataArray[i];
+      const value = this.vis.dataArrayM[i];
       if (!value) continue;
       const percent = value / 256;
       const height = yScale * this.el.albumImage.height * percent;
@@ -323,10 +342,173 @@ class Asa {
       this.vis.ctx.fillRect(i * barWidth, offset, barWidth, height);
     }
   }
+  private draw3(): void {
+    if (!this.el.albumImage) return;
+    if (!this.vis) return;
+    if (!this.vis.ctx) return;
+    const canvas = this.el.albumImage;
+    const ctx = this.vis.ctx;
+    const width = canvas.width;
+    const height = canvas.height;
+    const halfWidth = width / 2;
+    const bufferLength = this.vis.bufferLength;
+
+    ctx.clearRect(0, 0, width, height);
+
+    // Left channel: draw from bottom to top on left half, bars extend from left edge toward center
+    for (let i = 0; i < bufferLength; i++) {
+      const value = this.vis.dataArrayL[i];
+      if (!value) continue;
+      const percent = value / 256;
+      const barLength = percent * halfWidth;
+      const barHeight = height / bufferLength;
+      // Invert y so low frequencies are at the bottom
+      const y = height - (i + 1) * barHeight;
+      ctx.fillStyle = 'rgba(255,255,255, 0.5)';
+      // Invert x: start from left edge, go toward center
+      ctx.fillRect(0, y, barLength, barHeight);
+    }
+
+    // Right channel: draw from bottom to top on right half, bars extend from right edge toward center (mirrored)
+    for (let i = 0; i < bufferLength; i++) {
+      const value = this.vis.dataArrayR[i];
+      if (!value) continue;
+      const percent = value / 256;
+      const barLength = percent * halfWidth;
+      const barHeight = height / bufferLength;
+      // Invert y so low frequencies are at the bottom
+      const y = height - (i + 1) * barHeight;
+      ctx.fillStyle = 'rgba(255,255,255, 0.5)';
+      // Invert x: start from right edge, go toward center
+      ctx.fillRect(width - barLength, y, barLength, barHeight);
+    }
+  }
+  private draw4(): void {
+    if (!this.el.albumImage) return;
+    if (!this.vis) return;
+    if (!this.vis.ctx) return;
+    const canvas = this.el.albumImage;
+    const ctx = this.vis.ctx;
+    const width = canvas.width;
+    const height = canvas.height;
+    const halfWidth = width / 2;
+    const bufferLength = this.vis.bufferLength;
+
+    ctx.clearRect(0, 0, width, height);
+
+    // Left channel: draw from bottom to top on left half, bars extend from left edge toward center
+    for (let i = 0; i < bufferLength; i++) {
+      const value = this.vis.dataArrayL[i];
+      if (!value) continue;
+      const percent = value / 256;
+      const barLength = percent * halfWidth;
+      const barHeight = height / bufferLength;
+      // Invert y so low frequencies are at the bottom
+      const y = height - (i + 1) * barHeight;
+      ctx.fillStyle = 'rgba(255,255,255, 0.5)';
+      ctx.fillRect(halfWidth - barLength, y, barLength, barHeight);
+    }
+
+    // Right channel: draw from bottom to top on right half, bars extend from right edge toward center (mirrored)
+    for (let i = 0; i < bufferLength; i++) {
+      const value = this.vis.dataArrayR[i];
+      if (!value) continue;
+      const percent = value / 256;
+      const barLength = percent * halfWidth;
+      const barHeight = height / bufferLength;
+      // Invert y so low frequencies are at the bottom
+      const y = height - (i + 1) * barHeight;
+      ctx.fillStyle = 'rgba(255,255,255, 0.5)';
+      ctx.fillRect(halfWidth, y, barLength, barHeight);
+    }
+  }
+  private draw5(): void {
+    if (!this.el.albumImage) return;
+    if (!this.vis) return;
+    if (!this.vis.ctx) return;
+    const canvas = this.el.albumImage;
+    const ctx = this.vis.ctx;
+    const width = canvas.width;
+    const height = canvas.height;
+    const halfWidth = width / 2;
+    const bufferLength = this.vis.bufferLength;
+
+    ctx.clearRect(0, 0, width, height);
+
+    // Left channel: draw from top to bottom on left half, bars extend from left edge toward center
+    for (let i = 0; i < bufferLength; i++) {
+      const value = this.vis.dataArrayL[i];
+      if (!value) continue;
+      const percent = value / 256;
+      const barLength = percent * halfWidth;
+      const barHeight = height / bufferLength;
+      const y = i * barHeight;
+      ctx.fillStyle = 'rgba(255,255,255, 0.5)';
+      ctx.fillRect(halfWidth - barLength, y, barLength, barHeight);
+    }
+
+    // Right channel: draw from top to bottom on right half, bars extend from right edge toward center (mirrored)
+    for (let i = 0; i < bufferLength; i++) {
+      const value = this.vis.dataArrayR[i];
+      if (!value) continue;
+      const percent = value / 256;
+      const barLength = percent * halfWidth;
+      const barHeight = height / bufferLength;
+      const y = i * barHeight;
+      ctx.fillStyle = 'rgba(255,255,255, 0.5)';
+      ctx.fillRect(halfWidth, y, barLength, barHeight);
+    }
+  }
+  private draw6(): void {
+    if (!this.el.albumImage) return;
+    if (!this.vis) return;
+    if (!this.vis.ctx) return;
+    const canvas = this.el.albumImage;
+    const ctx = this.vis.ctx;
+    const width = canvas.width;
+    const height = canvas.height;
+    const halfWidth = width / 2;
+    const bufferLength = this.vis.bufferLength;
+
+    ctx.clearRect(0, 0, width, height);
+
+    // Left channel: draw from top to bottom on left half, bars extend rightward
+    for (let i = 0; i < bufferLength; i++) {
+      const value = this.vis.dataArrayL[i];
+      if (!value) continue;
+      const percent = value / 256;
+      const barLength = percent * halfWidth;
+      const barHeight = height / bufferLength;
+      const y = i * barHeight;
+      ctx.fillStyle = 'rgba(255,255,255, 0.5)';
+      ctx.fillRect(halfWidth - barLength, y, barLength, barHeight);
+    }
+
+    // Right channel: draw from bottom to top on right half, bars extend leftward (mirrored)
+    for (let i = 0; i < bufferLength; i++) {
+      const value = this.vis.dataArrayR[i];
+      if (!value) continue;
+      const percent = value / 256;
+      const barLength = percent * halfWidth;
+      const barHeight = height / bufferLength;
+      const y = height - (i + 1) * barHeight;
+      ctx.fillStyle = 'rgba(255,255,255, 0.5)';
+      ctx.fillRect(halfWidth, y, barLength, barHeight);
+    }
+  }
   private draw(): void {
     if (!this.vis) return;
     requestAnimationFrame(this.draw.bind(this));
-    this.vis.analyser.getByteFrequencyData(this.vis.dataArray);
+    this.vis.analyserL.getByteFrequencyData(this.vis.dataArrayL);
+    this.vis.analyserR.getByteFrequencyData(this.vis.dataArrayR);
+    // Merge left and right channels for mono data
+    if (this.vis) {
+      for (let i = 0; i < this.vis.bufferLength; i++) {
+        const l = this.vis.dataArrayL[i] || 0;
+        const r = this.vis.dataArrayR[i] || 0;
+        this.vis.dataArrayM[i] = (l + r) / 2;
+      }
+    }
     this.vis.fn();
   }
   private setupAudioContext(fftSize: number = 2048): void {
@@ -337,19 +519,33 @@ class Asa {
       }
       const audioCtx = new (AudioContext)();
       const source = audioCtx.createMediaElementSource(this.el.audioPlayer);
-      const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = fftSize;
-      source.connect(analyser);
-      analyser.connect(audioCtx.destination);
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
+      const splitter = audioCtx.createChannelSplitter(2);
+      const analyserL = audioCtx.createAnalyser();
+      const analyserR = audioCtx.createAnalyser();
+      source.connect(splitter);
+      analyserL.fftSize = fftSize;
+      analyserR.fftSize = fftSize;
+      splitter.connect(analyserL, 0); // Left channel
+      splitter.connect(analyserR, 1); // Right channel
+      source.connect(analyserL);
+      source.connect(analyserR);
+      // analyserL.connect(audioCtx.destination);
+      // analyserR.connect(audioCtx.destination);
+      source.connect(audioCtx.destination);
+      const bufferLength = analyserL.frequencyBinCount;
+      const dataArrayL = new Uint8Array(bufferLength);
+      const dataArrayR = new Uint8Array(bufferLength);
+      const dataArrayM = new Uint8Array(bufferLength);
       const mode = this.vis?.mode || 1;// 0 is none
       this.vis = {
         ctx: ctx,
         audioCtx: audioCtx,
-        analyser: analyser,
+        analyserL: analyserL,
+        analyserR: analyserR,
         bufferLength: bufferLength,
-        dataArray: dataArray,
+        dataArrayL: dataArrayL,
+        dataArrayR: dataArrayR,
+        dataArrayM: dataArrayM,
         mode: mode,
         fn: () => { },// Will be set later
       };
