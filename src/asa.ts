@@ -572,7 +572,7 @@ class Asa {
     this.vis.rmsRRaw = rms(this.vis.timeDomainDataR);
     // Merge rms
     this.vis.rmsMRaw = (this.vis.rmsLRaw + this.vis.rmsRRaw) / 2;
-    const alpha = 0.2; // Smoothing factor (0 < alpha < 1)
+    const alpha = 0.1; // Smoothing factor (0 < alpha < 1)
     this.vis.rmsL = this.vis.rmsL * (1 - alpha) + this.vis.rmsLRaw * alpha;
     this.vis.rmsR = this.vis.rmsR * (1 - alpha) + this.vis.rmsRRaw * alpha;
     this.vis.rmsM = this.vis.rmsM * (1 - alpha) + this.vis.rmsMRaw * alpha;
