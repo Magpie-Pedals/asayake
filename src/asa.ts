@@ -535,15 +535,12 @@ class Asa {
     const data = imageData.data;
     // console.log(`RMS M: ${this.vis.rmsM}, L: ${this.vis.rmsL}, R: ${this.vis.rmsR}`);
     const min = 0.3;
+    const scale = 1.0 - min;
     for (let i = 0; i < data.length; i += 4) {
       // NOTE: data[i] is red, data[i+1] is green, data[i+2] is blue, data[i+3] is alpha
-      // data[i]! *= Math.max(min, this.vis.rmsM);
-      // data[i + 1]! *= Math.max(min, this.vis.rmsL);
-      // data[i + 2]! *= Math.max(min, this.vis.rmsR);
-      //
-      data[i]! *= min + this.vis.rmsM;
-      data[i + 1]! *= min + this.vis.rmsL;
-      data[i + 2]! *= min + this.vis.rmsR;
+      data[i]! *= Math.pow(min + this.vis.rmsM * scale, 0.5);
+      data[i + 1]! *= Math.pow(min + this.vis.rmsL * scale, 0.5);
+      data[i + 2]! *= Math.pow(min + this.vis.rmsR * scale, 0.5);
     }
     ctx.putImageData(imageData, 0, 0);
   }
