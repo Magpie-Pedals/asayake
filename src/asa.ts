@@ -48,6 +48,18 @@ class Asa {
   private trackIndex: number = 0;
   private isShuffle: boolean = false;
   private vis: AsaVis | null = null;
+  private modeMap = [
+    { fftSize: 32, fn: this.draw0 },
+    { fftSize: 64, fn: this.draw1 },
+    { fftSize: 2048, fn: this.draw1 },
+    { fftSize: 64, fn: this.draw2 },
+    { fftSize: 2048, fn: this.draw2 },
+    { fftSize: 512, fn: this.draw3 },
+    { fftSize: 512, fn: this.draw4 },
+    { fftSize: 512, fn: this.draw5 },
+    { fftSize: 512, fn: this.draw6 },
+    { fftSize: 32, fn: this.draw7 }
+  ];
   constructor(elementId: string) {
     const element = document.getElementById(elementId);
     if (!element) {
@@ -170,64 +182,23 @@ class Asa {
   }
   private updateVisMode(): void {
     if (!this.vis) return;
-    switch (this.vis.mode) {
-      case 0:
-        this.vis.fn = this.draw0.bind(this);
-        break;
-      case 1:
-        this.setupVisContext(64);
-        this.vis.fn = this.draw1.bind(this);
-        break;
-      case 2:
-        this.setupVisContext(2048);
-        this.vis.fn = this.draw1.bind(this);
-        break;
-      case 3:
-        this.setupVisContext(64);
-        this.vis.fn = this.draw2.bind(this);
-        break;
-      case 4:
-        this.setupVisContext(2048);
-        this.vis.fn = this.draw2.bind(this);
-        break;
-      case 5:
-        this.setupVisContext(512);
-        this.vis.fn = this.draw3.bind(this);
-        break;
-      case 6:
-        this.setupVisContext(512);
-        this.vis.fn = this.draw4.bind(this);
-        break;
-      case 7:
-        this.setupVisContext(512);
-        this.vis.fn = this.draw5.bind(this);
-        break;
-      case 8:
-        this.setupVisContext(512);
-        this.vis.fn = this.draw6.bind(this);
-        break;
-      case 9:
-        this.setupVisContext(32);
-        this.vis.fn = this.draw7.bind(this);
-        break;
-      default:
-        this.vis.fn = this.draw0.bind(this);
-        break;
-    }
+    const cfg = this.modeMap[this.vis.mode] ?? this.modeMap[0];
+    if (cfg!.fftSize) this.setupVisContext(cfg!.fftSize);
+    this.vis.fn = cfg!.fn.bind(this);
   }
   private onAlbumImageClick(): void {
     if (!this.vis) return;
     if (this.el.audioPlayer && this.el.audioPlayer.paused) {
       this.play();
     }
-    this.vis.mode = (this.vis.mode + 1) % 10;
+    this.vis.mode = (this.vis.mode + 1) % this.modeMap.length;
     console.log(`Visualization mode changed to ${this.vis.mode}`);
     this.updateVisMode();
   }
   private onShuffleClick(): void {
     this.isShuffle = !this.isShuffle;
   }
-  // SCRUBBER EVENTS
+  // Scrubber Events
   private handleScrub(e: PointerEvent, scrubber: HTMLElement): void {
     if (!this.el.audioPlayer) return;
     const rect = scrubber.getBoundingClientRect();
@@ -251,7 +222,7 @@ class Asa {
       window.addEventListener('pointerup', onPointerUp);
     });
   }
-  // VOLUME EVENTS
+  // Volume events
   private handleVolume(e: PointerEvent, volumeControl: HTMLElement): void {
     if (!this.el.audioPlayer) return;
     const rect = volumeControl.getBoundingClientRect();
