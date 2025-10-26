@@ -533,7 +533,6 @@ class Asa {
     ctx.drawImage(img, x, y, drawWidth, drawHeight);
     const imageData = ctx.getImageData(0, 0, drawWidth, drawHeight);
     const data = imageData.data;
-    // console.log(`RMS M: ${this.vis.rmsM}, L: ${this.vis.rmsL}, R: ${this.vis.rmsR}`);
     const min = 0.3;
     const scale = 1.0 - min;
     for (let i = 0; i < data.length; i += 4) {
@@ -559,7 +558,7 @@ class Asa {
     }
     this.vis.analyserL.getByteTimeDomainData(this.vis.timeDomainDataL);
     this.vis.analyserR.getByteTimeDomainData(this.vis.timeDomainDataR);
-    // Get the rms
+    // Calculate rms from a buffer
     const rms = (data: Uint8Array) => {
       let sum = 0;
       for (let i = 0; i < data.length; i++) {
@@ -596,8 +595,6 @@ class Asa {
       splitter.connect(analyserR, 1); // Right channel
       source.connect(analyserL);
       source.connect(analyserR);
-      // analyserL.connect(audioCtx.destination);
-      // analyserR.connect(audioCtx.destination);
       source.connect(audioCtx.destination);
       const bufferLength = analyserL.frequencyBinCount;
       const dataArrayL = new Uint8Array(bufferLength);
@@ -625,8 +622,6 @@ class Asa {
         img: this.vis?.img ?? new Image(), // Will be set later
         fn: () => { },// Will be set later
       };
-
-      // this.vis.img!.src = 'placeholder.png'; // Default image
 
       this.el.audioPlayer.onplay = () => {
         console.log("Resuming audio context");
