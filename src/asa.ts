@@ -229,7 +229,19 @@ class Asa {
     const pointerX = e.clientX - rect.left;
     const width = rect.width;
     const percent = Math.max(0, Math.min(1, pointerX / width));
-    this.el.audioPlayer.volume = percent;
+    // Logarithmic scaling: perceptual volume
+    const minDb = -50;
+    const maxDb = 0;
+    let linear: number;
+    if (percent === 0) {
+      linear = 0;
+    } else if (percent === 1) {
+      linear = 1;
+    } else {
+      const db = minDb + (maxDb - minDb) * percent;
+      linear = Math.pow(10, db / 20);
+    }
+    this.el.audioPlayer.volume = linear;
     if (this.el.volumeFill) {
       this.el.volumeFill.style.width = `${percent * 100}%`;
     }
@@ -408,11 +420,13 @@ class Asa {
       ctx.fillStyle = 'rgba(255,255,255, 0.5)';
       ctx.fillRect(halfWidth, y, barLength, barHeight);
     }
+
   }
   private draw5(): void {
     if (!this.el.albumImage) return;
     if (!this.vis) return;
     if (!this.vis.ctx) return;
+
     const canvas = this.el.albumImage;
     const ctx = this.vis.ctx;
     const width = canvas.width;
@@ -433,7 +447,6 @@ class Asa {
       ctx.fillStyle = 'rgba(255,255,255, 0.5)';
       ctx.fillRect(halfWidth - barLength, y, barLength, barHeight);
     }
-
     // Right channel: draw from top to bottom on right half, bars extend from right edge toward center (mirrored)
     for (let i = 0; i < bufferLength; i++) {
       const value = this.vis.dataArrayR[i];
