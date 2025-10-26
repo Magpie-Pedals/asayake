@@ -160,9 +160,6 @@ body {
   cursor: pointer;
   overflow: hidden;
 }
-.asa-scrubber:hover {
-  background: var(--asa-c3);
-}
 .asa-scrubber-fill {
   background: var(--asa-c4);
   width: 1%;
@@ -179,9 +176,6 @@ body {
   cursor: pointer;
   border-radius: 0.25rem;
   overflow: hidden;
-}
-.asa-volume-control:hover {
-  background: var(--asa-c3);
 }
 .asa-volume-fill {
   background: var(--asa-c4);
