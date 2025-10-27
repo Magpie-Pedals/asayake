@@ -39,10 +39,11 @@ type AsaVis = {
   mode: number;
   img: HTMLImageElement | null;
   fn: () => void;
-}
+};
 
 class Asa {
   private el: AsaElements;
+  private pathPrefix: string = 'http://localhost:8080';
   private master: AsaMasterList | null = null;
   private playlist: AsaPlaylist = [];
   private trackIndex: number = 0;
@@ -60,7 +61,8 @@ class Asa {
     { fftSize: 512, fn: this.draw6 },
     { fftSize: 32, fn: this.draw7 }
   ];
-  constructor(elementId: string) {
+  constructor(elementId: string, pathPrefix: string = '') {
+    this.pathPrefix = pathPrefix;
     const element = document.getElementById(elementId);
     if (!element) {
       throw new Error(`Element with id ${elementId} not found`);
@@ -122,21 +124,21 @@ class Asa {
       console.error("Audio element not initialized");
       return;
     }
-    this.el.audioPlayer.src = track.audioUri;
+    this.el.audioPlayer.src = `${this.pathPrefix}/${track.audioUri}`;
     this.el.audioPlayer.currentTime = 0;
     this.el.audioPlayer.load();
     if (this.el.albumImage) {
-      // Check if the image exists by making a HEAD request
       if (!track.albumImageUri) {
         this.el.albumImage.style.backgroundImage = 'url("placeholder.png")';
         this.vis!.img!.src = 'placeholder.png';
       }
+      // Check if the image exists by making a HEAD request
       else {
         fetch(track.albumImageUri, { method: 'HEAD' })
           .then((response) => {
             if (response.ok) {
-              this.el.albumImage!.style.backgroundImage = `url("${track.albumImageUri}")`;
-              this.vis!.img!.src = track.albumImageUri;
+              this.el.albumImage!.style.backgroundImage = `url("${this.pathPrefix}/${track.albumImageUri}")`;
+              this.vis!.img!.src = `${this.pathPrefix}/${track.albumImageUri}`;
             }
             else {
               this.el.albumImage!.style.backgroundImage = 'url("placeholder.png")';
@@ -235,9 +237,11 @@ class Asa {
     let linear: number;
     if (percent === 0) {
       linear = 0;
-    } else if (percent === 1) {
+    }
+    else if (percent === 1) {
       linear = 1;
-    } else {
+    }
+    else {
       const db = minDb + (maxDb - minDb) * percent;
       linear = Math.pow(10, db / 20);
     }
@@ -657,6 +661,10 @@ class Asa {
     this.el.albumImage.className = 'asa-album-image';
     this.el.asa.appendChild(this.el.albumImage);
     this.el.albumImage.onclick = this.onAlbumImageClick.bind(this);
+    this.el.albumImage.oncontextmenu = (e) => {
+      e.preventDefault();
+
+    }
 
     // Add the control elements
     const controlsElement = document.createElement('div');
@@ -764,4 +772,5 @@ declare global {
     Asa: typeof Asa;
   }
 }
+
 window.Asa = Asa;
