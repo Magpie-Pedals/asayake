@@ -1,8 +1,5 @@
-<button id="playlist1-btn">Load Playlist 1</button>
-<br>
-<button id="playlist2-btn">Load Playlist 2</button>
-<br>
-<div id="asa-element"></div>
+<div id="asa-playlist-list-container"></div>
+<div id="asa-player-container"></div>
 
 <script src="asa.js"></script>
 <script>
@@ -30,7 +27,7 @@ const playlistSimple = [
 ];
 
 const playlist = {
-  name: 'My Playlist 1',
+  title: 'My Playlist 1',
   albumImageUri: 'https://example.com/album-art.jpg',
   trackIds: playlistSimple,
 };
@@ -39,7 +36,8 @@ const playlistId = "Sample Collab 5";
 
 const asaConfig = {
   pathPrefix: '',
-  playerElement: document.getElementById('asa-element'),
+  playerElement: document.getElementById('asa-player-container'),
+  playlistListElement: document.getElementById('asa-playlist-list-container'),
 };
 
 const asa = new Asa(asaConfig);

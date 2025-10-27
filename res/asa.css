@@ -12,14 +12,50 @@
 body {
   background: var(--asa-c1);
   color: var(--asa-c4);
+  font-family: Arial, sans-serif;
 }
-#asa-element {
+#asa-player-container {
   width: 360px;
   border: 1px solid #444444;
-  font-family: Arial, sans-serif;
   margin: 20px;
   padding: 10px;
 }
+
+/* Playlist List Styles */
+.asa-playlist-list-item {
+  background-image: none;
+  background-color: var(--asa-c2);
+  margin: 0.2rem 0;
+  max-width: 300px;
+  height: 5rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+.asa-playlist-list-item:hover {
+  background-color: var(--asa-c3);
+}
+.asa-playlist-list-item-title {
+  display: inline-block;
+  padding: 0.5rem;
+  font-weight: bold;
+  color: var(--asa-c4);
+  width: calc(67% - 1rem);
+  vertical-align: top;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.asa-playlist-list-item-cover {
+  background-color: var(--asa-c3);
+  display: inline-block;
+  background-size: cover;
+  background-position: center;
+  width: 33%;
+  height: 100%;
+}
+
+
+/* Player Styles */
 
 .asa-player {
   background: var(--asa-c1);

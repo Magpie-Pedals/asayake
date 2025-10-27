@@ -37,7 +37,7 @@ export type AsaTrackId = string;
 export type AsaPlaylistId = string;
 
 export type AsaPlaylist = {
-  name: string;
+  title: string;
   albumImageUri: string;
   trackIds: AsaTrackId[]
 };

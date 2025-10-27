@@ -49,7 +49,7 @@ type AsaVis = {
 type AsaConfig = {
   pathPrefix: string;
   playerElement: HTMLElement;
-  playlistElement?: HTMLElement;
+  playlistListElement?: HTMLElement;
 };
 
 class Asa {
@@ -79,7 +79,7 @@ class Asa {
     this.config = config;
     this.el = {
       playerTarget: config.playerElement,
-      playlistTarget: config.playlistElement || null,
+      playlistTarget: config.playlistListElement || null,
       asa: null,
       audioPlayer: null,
       nowPlayingTitle: null,
@@ -759,6 +759,31 @@ class Asa {
     // Setup audio event listeners
     this.el.audioPlayer.addEventListener('timeupdate', this.onTimeUpdate.bind(this, timestamp));
   }
+  private initPlaylistList(): void {
+    if (!this.el.playlistTarget) return;
+    if (!this.meta.playlists) return;
+    this.el.playlistTarget.innerHTML = '';
+    for (const [playlistId, playlistData] of Object.entries(this.meta.playlists)) {
+      console.log(`Adding playlist ${playlistId}: ${JSON.stringify(playlistData)}`);
+      const listElement = document.createElement('div');
+      listElement.className = 'asa-playlist-list-item';
+      listElement.onclick = async () => {
+        await this.yeet(playlistId);
+      };
+
+      const titleElement = document.createElement('div');
+      titleElement.className = 'asa-playlist-list-item-title';
+      titleElement.innerText = playlistData.title;
+      listElement.appendChild(titleElement);
+
+      const coverElement = document.createElement('div');
+      coverElement.className = 'asa-playlist-list-item-cover';
+      coverElement.style.backgroundImage = `url("${playlistData.albumImageUri || ''}")`;
+      listElement.appendChild(coverElement);
+
+      this.el.playlistTarget.appendChild(listElement);
+    }
+  }
   async yeet(playlist: AsaPlaylist | AsaPlaylistSimple | AsaPlaylistId): Promise<void> {
     // We only want to grab the  master list once
     if (!this.meta.master) {
@@ -786,6 +811,7 @@ class Asa {
       this.playlist = Asa.makePlaylistInternal(this.meta.master, playlistRaw);
     }
     console.log("Playlist:", this.playlist);
+    this.initPlaylistList();
     this.initPlayer(this.playlist);
     this.updateTrack(0);
     // Set up the audio context

@@ -14,7 +14,7 @@ for (const [key, data] of Object.entries(metadata)) {
   const album = data.albumTitle || 'Unknown Album';
   if (!playlists[album]) {
     playlists[album] = {
-      name: album,
+      title: album,
       albumImageUri: data.albumImageUri,
       trackIds: [],
     };
