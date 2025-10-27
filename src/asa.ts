@@ -1,10 +1,7 @@
 console.log("Hello, World!");
 
-import type { AsaMasterList } from './types.ts';
-import type { AsaTrackMeta } from './types.ts';
+import type { AsaMasterList, AsaPlaylist, AsaPlaylistInternal } from './types.ts';
 
-type AsaPlaylistRaw = string[];
-type AsaPlaylist = AsaTrackMeta[];
 
 type AsaElements = {
   target: HTMLElement;
@@ -43,9 +40,9 @@ type AsaVis = {
 
 class Asa {
   private el: AsaElements;
-  private pathPrefix: string = 'http://localhost:8080';
+  private pathPrefix: string = '';
   private master: AsaMasterList | null = null;
-  private playlist: AsaPlaylist = [];
+  private playlist: AsaPlaylistInternal = [];
   private trackIndex: number = 0;
   private isShuffle: boolean = false;
   private vis: AsaVis | null = null;
@@ -97,10 +94,10 @@ class Asa {
       return null;
     }
   }
-  private static makePlaylist(master: AsaMasterList, playlistRaw: AsaPlaylistRaw): AsaPlaylist {
-    const playlist: AsaPlaylist = [];
+  private static makePlaylistInternal(master: AsaMasterList, playlistRaw: AsaPlaylist): AsaPlaylistInternal {
+    const playlist: AsaPlaylistInternal = [];
     for (const [key, data] of Object.entries(master)) {
-      if (playlistRaw.includes(key)) {
+      if (playlistRaw.trackIds.includes(key)) {
         playlist.push(data);
       }
     }
@@ -182,12 +179,6 @@ class Asa {
       this.pause();
     }
   }
-  private updateVisMode(): void {
-    if (!this.vis) return;
-    const cfg = this.modeMap[this.vis.mode] ?? this.modeMap[0];
-    if (cfg!.fftSize) this.setupVisContext(cfg!.fftSize);
-    this.vis.fn = cfg!.fn.bind(this);
-  }
   private onAlbumImageClick(): void {
     if (!this.vis) return;
     if (this.el.audioPlayer && this.el.audioPlayer.paused) {
@@ -200,26 +191,64 @@ class Asa {
   private onShuffleClick(): void {
     this.isShuffle = !this.isShuffle;
   }
-  // Scrubber Events
-  private handleScrub(e: PointerEvent, scrubber: HTMLElement): void {
-    if (!this.el.audioPlayer) return;
-    const rect = scrubber.getBoundingClientRect();
-    const pointerX = e.clientX - rect.left;
-    const width = rect.width;
-    const percent = Math.max(0, Math.min(1, pointerX / width));
-    const newTime = percent * this.el.audioPlayer.duration;
-    this.el.audioPlayer.currentTime = newTime;
+  private onPlaylistClick(trackIndex: number): void {
+    console.log(`Track ${trackIndex} clicked`);
+    this.updateTrack(trackIndex);
+    this.play();
+    this.trackIndex = trackIndex;
   }
+  // NOTE:
+  // Listening for `ended` has some delay so use this instead
+  private onTimeUpdate(timestamp: HTMLElement): void {
+    if (!this.el.audioPlayer) return;
+    if (this.el.audioPlayer.currentTime >= this.el.audioPlayer.duration) {
+      this.el.audioPlayer.pause();
+      this.el.audioPlayer.currentTime = this.el.audioPlayer.duration;
+      this.nextTrack(this.trackIndex);
+    }
+    // Update scrubber
+    if (this.el.audioPlayer.duration > 0) {
+      const progress = (this.el.audioPlayer.currentTime / this.el.audioPlayer.duration) * 100;
+      if (this.el.scrubberFill) {
+        this.el.scrubberFill.style.width = `${progress}%`;
+      }
+    }
+    // Update timestamp
+    const current = Math.floor(this.el.audioPlayer.currentTime);
+    const duration = Math.floor(this.el.audioPlayer.duration);
+    const formatTime = (time: number) => {
+      const minutes = Math.floor(time / 60).toString().padStart(2, '0');
+      const seconds = (time % 60).toString().padStart(2, '0');
+      return `${minutes}:${seconds}`;
+    };
+    timestamp.innerText = `${formatTime(current)} / ${formatTime(duration)}`;
+  }
+  private updateVisMode(): void {
+    if (!this.vis) return;
+    const cfg = this.modeMap[this.vis.mode] ?? this.modeMap[0];
+    if (cfg!.fftSize) this.setupVisContext(cfg!.fftSize);
+    this.vis.fn = cfg!.fn.bind(this);
+  }
+  // Scrubber Events
   private attachScrubberEvents(scrubber: HTMLElement): void {
+    const handleScrub = (e: PointerEvent, scrubber: HTMLElement): void => {
+      if (!this.el.audioPlayer) return;
+      const rect = scrubber.getBoundingClientRect();
+      const pointerX = e.clientX - rect.left;
+      const width = rect.width;
+      const percent = Math.max(0, Math.min(1, pointerX / width));
+      const newTime = percent * this.el.audioPlayer.duration;
+      this.el.audioPlayer.currentTime = newTime;
+    }
     const onPointerMove = (e: PointerEvent) => {
-      this.handleScrub(e, scrubber);
+      handleScrub(e, scrubber);
     };
     const onPointerUp = () => {
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
     };
     scrubber.addEventListener('pointerdown', (e: PointerEvent) => {
-      this.handleScrub(e, scrubber);
+      handleScrub(e, scrubber);
       window.addEventListener('pointermove', onPointerMove);
       window.addEventListener('pointerup', onPointerUp);
     });
@@ -263,38 +292,6 @@ class Asa {
       window.addEventListener('pointermove', onPointerMove);
       window.addEventListener('pointerup', onPointerUp);
     });
-  }
-  private onPlaylistClick(trackIndex: number): void {
-    console.log(`Track ${trackIndex} clicked`);
-    this.updateTrack(trackIndex);
-    this.play();
-    this.trackIndex = trackIndex;
-  }
-  // NOTE:
-  // Listening for `ended` has some delay so use this instead
-  private onTimeUpdate(timestamp: HTMLElement): void {
-    if (!this.el.audioPlayer) return;
-    if (this.el.audioPlayer.currentTime >= this.el.audioPlayer.duration) {
-      this.el.audioPlayer.pause();
-      this.el.audioPlayer.currentTime = this.el.audioPlayer.duration;
-      this.nextTrack(this.trackIndex);
-    }
-    // Update scrubber
-    if (this.el.audioPlayer.duration > 0) {
-      const progress = (this.el.audioPlayer.currentTime / this.el.audioPlayer.duration) * 100;
-      if (this.el.scrubberFill) {
-        this.el.scrubberFill.style.width = `${progress}%`;
-      }
-    }
-    // Update timestamp
-    const current = Math.floor(this.el.audioPlayer.currentTime);
-    const duration = Math.floor(this.el.audioPlayer.duration);
-    const formatTime = (time: number) => {
-      const minutes = Math.floor(time / 60).toString().padStart(2, '0');
-      const seconds = (time % 60).toString().padStart(2, '0');
-      return `${minutes}:${seconds}`;
-    };
-    timestamp.innerText = `${formatTime(current)} / ${formatTime(duration)}`;
   }
   private draw0(): void {
     if (!this.el.albumImage) return;
@@ -618,7 +615,7 @@ class Asa {
       };
     }
   }
-  private initPlayer(playlist: AsaPlaylist): void {
+  private initPlayer(playlist: AsaPlaylistInternal): void {
     this.el.target.innerHTML = ''; // Clear existing content
     this.el.asa = document.createElement('div');
     this.el.asa.className = 'asa-player';
@@ -743,7 +740,7 @@ class Asa {
     // Setup audio event listeners
     this.el.audioPlayer.addEventListener('timeupdate', this.onTimeUpdate.bind(this, timestamp));
   }
-  async yeet(playlistRaw: AsaPlaylistRaw = []): Promise<void> {
+  async yeet(playlistRaw: AsaPlaylist): Promise<void> {
     // We only want to grab the  master list once
     if (!this.master) {
       await this.init();
@@ -756,7 +753,7 @@ class Asa {
     if (this.el.tracks) {
       this.el.tracks = [];
     }
-    this.playlist = Asa.makePlaylist(this.master, playlistRaw);
+    this.playlist = Asa.makePlaylistInternal(this.master, playlistRaw);
     console.log("Playlist:", this.playlist);
     this.initPlayer(this.playlist);
     this.updateTrack(0);
