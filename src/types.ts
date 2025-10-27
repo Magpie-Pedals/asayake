@@ -38,4 +38,5 @@ export type AsaPlaylist = {
   albumImageUri: string;
   trackIds: string[]
 };
+export type AsaPlaylistList = AsaPlaylist[];
 export type AsaPlaylistInternal = AsaTrackMeta[];

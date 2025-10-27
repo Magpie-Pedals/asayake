@@ -1,10 +1,16 @@
 console.log("Hello, World!");
 
-import type { AsaMasterList, AsaPlaylist, AsaPlaylistInternal } from './types.ts';
+import type {
+  AsaMasterList,
+  AsaPlaylist,
+  AsaPlaylistInternal,
+  AsaPlaylistList,
+} from './types.ts';
 
 
 type AsaElements = {
-  target: HTMLElement;
+  playerTarget: HTMLElement;
+  playlistTarget: HTMLElement | null;
   asa: HTMLElement | null;
   audioPlayer: HTMLAudioElement | null;
   nowPlayingTitle: HTMLElement | null;
@@ -38,9 +44,15 @@ type AsaVis = {
   fn: () => void;
 };
 
+type AsaConfig = {
+  pathPrefix: string;
+  playerTarget: HTMLElement;
+  playlistTarget?: HTMLElement;
+};
+
 class Asa {
+  private config: AsaConfig;
   private el: AsaElements;
-  private pathPrefix: string = '';
   private master: AsaMasterList | null = null;
   private playlist: AsaPlaylistInternal = [];
   private trackIndex: number = 0;
@@ -58,14 +70,11 @@ class Asa {
     { fftSize: 512, fn: this.draw6 },
     { fftSize: 32, fn: this.draw7 }
   ];
-  constructor(elementId: string, pathPrefix: string = '') {
-    this.pathPrefix = pathPrefix;
-    const element = document.getElementById(elementId);
-    if (!element) {
-      throw new Error(`Element with id ${elementId} not found`);
-    }
+  constructor(config: AsaConfig) {
+    this.config = config;
     this.el = {
-      target: element,
+      playerTarget: config.playerTarget,
+      playlistTarget: config.playlistTarget || null,
       asa: null,
       audioPlayer: null,
       nowPlayingTitle: null,
@@ -121,7 +130,7 @@ class Asa {
       console.error("Audio element not initialized");
       return;
     }
-    this.el.audioPlayer.src = `${this.pathPrefix}/${track.audioUri}`;
+    this.el.audioPlayer.src = `${this.config.pathPrefix}/${track.audioUri}`;
     this.el.audioPlayer.currentTime = 0;
     this.el.audioPlayer.load();
     if (this.el.albumImage) {
@@ -134,8 +143,8 @@ class Asa {
         fetch(track.albumImageUri, { method: 'HEAD' })
           .then((response) => {
             if (response.ok) {
-              this.el.albumImage!.style.backgroundImage = `url("${this.pathPrefix}/${track.albumImageUri}")`;
-              this.vis!.img!.src = `${this.pathPrefix}/${track.albumImageUri}`;
+              this.el.albumImage!.style.backgroundImage = `url("${this.config.pathPrefix}/${track.albumImageUri}")`;
+              this.vis!.img!.src = `${this.config.pathPrefix}/${track.albumImageUri}`;
             }
             else {
               this.el.albumImage!.style.backgroundImage = 'url("placeholder.png")';
@@ -616,7 +625,7 @@ class Asa {
     }
   }
   private initPlayer(playlist: AsaPlaylistInternal): void {
-    this.el.target.innerHTML = ''; // Clear existing content
+    this.el.playerTarget.innerHTML = ''; // Clear existing content
     this.el.asa = document.createElement('div');
     this.el.asa.className = 'asa-player';
     const playlistElement = document.createElement('div');
@@ -735,12 +744,15 @@ class Asa {
     this.el.asa.appendChild(timestamp);
     this.el.asa.appendChild(this.el.audioPlayer);
     // Finally, append to target
-    this.el.target.appendChild(this.el.asa);
+    this.el.playerTarget.appendChild(this.el.asa);
 
     // Setup audio event listeners
     this.el.audioPlayer.addEventListener('timeupdate', this.onTimeUpdate.bind(this, timestamp));
   }
-  async yeet(playlistRaw: AsaPlaylist): Promise<void> {
+  async yeetPlaylistList(playlistList: AsaPlaylistList): Promise<void> {
+
+  }
+  async yeet(playlist: AsaPlaylist): Promise<void> {
     // We only want to grab the  master list once
     if (!this.master) {
       await this.init();
@@ -753,7 +765,7 @@ class Asa {
     if (this.el.tracks) {
       this.el.tracks = [];
     }
-    this.playlist = Asa.makePlaylistInternal(this.master, playlistRaw);
+    this.playlist = Asa.makePlaylistInternal(this.master, playlist);
     console.log("Playlist:", this.playlist);
     this.initPlayer(this.playlist);
     this.updateTrack(0);
