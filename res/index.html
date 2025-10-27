@@ -11,7 +11,8 @@
 //
 
 // Add track keys here to include in the playlist
-const playlist1 = [
+
+const playlistSimple = [
   '10007019',
   '13835280',
   '14389788',
@@ -27,25 +28,22 @@ const playlist1 = [
   '41254965',
   '44107866',
 ];
-const playlist2 = [
-  '10007019',
-  '13835280',
-  '14389788',
-];
 
-const asa = new Asa('asa-element');
-asa.yeet(playlist1);
+const playlist = {
+  name: 'My Playlist 1',
+  albumImageUri: 'https://example.com/album-art.jpg',
+  trackIds: playlistSimple,
+};
 
-// Demo buttons for switching playlists
-const p1Btn = document.getElementById('playlist1-btn');
-const p2Btn = document.getElementById('playlist2-btn');
-p1Btn?.addEventListener('click', () => {
-  console.log("Loading Playlist 1");
-  asa.yeet(playlist1);
-});
-p2Btn?.addEventListener('click', () => {
-  console.log("Loading Playlist 2");
-  asa.yeet(playlist2);
-});
+const playlistId = "Sample Collab 5";
+
+const asaConfig = {
+  pathPrefix: '',
+  playerElement: document.getElementById('asa-element'),
+};
+
+const asa = new Asa(asaConfig);
+asa.yeet(playlistSimple);
+
 </script>
 <link rel="stylesheet" href="asa.css">

@@ -33,10 +33,19 @@ export type AsaRecordRaw = {
   };
 }
 
+export type AsaTrackId = string;
+export type AsaPlaylistId = string;
+
 export type AsaPlaylist = {
   name: string;
   albumImageUri: string;
-  trackIds: string[]
+  trackIds: AsaTrackId[]
 };
-export type AsaPlaylistList = AsaPlaylist[];
+
+export type AsaPlaylistSimple = AsaTrackId[];
+
+export type AsaPlaylistList = {
+  [key: string]: AsaPlaylist;
+};
+
 export type AsaPlaylistInternal = AsaTrackMeta[];

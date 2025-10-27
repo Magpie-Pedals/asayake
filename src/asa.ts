@@ -3,7 +3,9 @@ console.log("Hello, World!");
 import type {
   AsaMasterList,
   AsaPlaylist,
+  AsaPlaylistSimple,
   AsaPlaylistInternal,
+  AsaPlaylistId,
   AsaPlaylistList,
 } from './types.ts';
 
@@ -46,14 +48,17 @@ type AsaVis = {
 
 type AsaConfig = {
   pathPrefix: string;
-  playerTarget: HTMLElement;
-  playlistTarget?: HTMLElement;
+  playerElement: HTMLElement;
+  playlistElement?: HTMLElement;
 };
 
 class Asa {
   private config: AsaConfig;
   private el: AsaElements;
-  private master: AsaMasterList | null = null;
+  private meta = {
+    master: null as AsaMasterList | null,
+    playlists: null as AsaPlaylistList | null,
+  };
   private playlist: AsaPlaylistInternal = [];
   private trackIndex: number = 0;
   private isShuffle: boolean = false;
@@ -73,8 +78,8 @@ class Asa {
   constructor(config: AsaConfig) {
     this.config = config;
     this.el = {
-      playerTarget: config.playerTarget,
-      playlistTarget: config.playlistTarget || null,
+      playerTarget: config.playerElement,
+      playlistTarget: config.playlistElement || null,
       asa: null,
       audioPlayer: null,
       nowPlayingTitle: null,
@@ -86,31 +91,36 @@ class Asa {
       tracks: [],
     };
   }
-  private async init(): Promise<void> {
-    this.master = await Asa.fetchMetadata();
-    if (!this.master) {
-      throw new Error("Failed to load master metadata");
-    }
-  }
-  private static async fetchMetadata(): Promise<AsaMasterList | null> {
+  private async fetchMetadata(): Promise<void> {
     try {
       const response = await fetch('metadata/metadata.json');
       const data = await response.json();
-      return data;
+      this.meta.master = data as AsaMasterList;
     }
     catch (error) {
       console.error("Error fetching metadata:", error);
-      return null;
+      throw error;
+    }
+    try {
+      const response = await fetch('metadata/playlists.json');
+      const data = await response.json();
+      this.meta.playlists = data as AsaPlaylistList;
+    }
+    // Playlists are optional and will remain null if not found
+    catch (error) {
+      console.error("Error fetching playlists:", error);
     }
   }
-  private static makePlaylistInternal(master: AsaMasterList, playlistRaw: AsaPlaylist): AsaPlaylistInternal {
-    const playlist: AsaPlaylistInternal = [];
+  private static makePlaylistInternal(master: AsaMasterList, playlist: AsaPlaylist | AsaPlaylistSimple): AsaPlaylistInternal {
+    const playlistInternal: AsaPlaylistInternal = [];
     for (const [key, data] of Object.entries(master)) {
-      if (playlistRaw.trackIds.includes(key)) {
-        playlist.push(data);
+      // Handle both simple array and object playlist formats
+      const trackIds = Array.isArray(playlist) ? playlist : playlist.trackIds;
+      if (trackIds.includes(key)) {
+        playlistInternal.push(data);
       }
     }
-    return playlist;
+    return playlistInternal;
   }
   private play(): void {
     this.el.audioPlayer?.play();
@@ -749,15 +759,12 @@ class Asa {
     // Setup audio event listeners
     this.el.audioPlayer.addEventListener('timeupdate', this.onTimeUpdate.bind(this, timestamp));
   }
-  async yeetPlaylistList(playlistList: AsaPlaylistList): Promise<void> {
-
-  }
-  async yeet(playlist: AsaPlaylist): Promise<void> {
+  async yeet(playlist: AsaPlaylist | AsaPlaylistSimple | AsaPlaylistId): Promise<void> {
     // We only want to grab the  master list once
-    if (!this.master) {
-      await this.init();
+    if (!this.meta.master) {
+      await this.fetchMetadata();
     }
-    if (!this.master) {
+    if (!this.meta.master) {
       throw new Error("Master metadata not initialized");
     }
     // Reset track index and playlist
@@ -765,7 +772,19 @@ class Asa {
     if (this.el.tracks) {
       this.el.tracks = [];
     }
-    this.playlist = Asa.makePlaylistInternal(this.master, playlist);
+    if (typeof playlist === 'object') {
+      this.playlist = Asa.makePlaylistInternal(this.meta.master, playlist);
+    }
+    else { // it's an ID
+      if (!this.meta.playlists) {
+        throw new Error("Playlists metadata not initialized");
+      }
+      const playlistRaw = this.meta.playlists[playlist];
+      if (!playlistRaw) {
+        throw new Error(`Playlist with ID ${playlist} not found`);
+      }
+      this.playlist = Asa.makePlaylistInternal(this.meta.master, playlistRaw);
+    }
     console.log("Playlist:", this.playlist);
     this.initPlayer(this.playlist);
     this.updateTrack(0);

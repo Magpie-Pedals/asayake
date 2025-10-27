@@ -4,3 +4,5 @@ This workflow overall needs to be cleaned up
 
 Auto generate playlists by artists and albums
 Link to them from playlists
+
+We can append playlist data
