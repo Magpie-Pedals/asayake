@@ -445,7 +445,8 @@ class Asa {
     }
     const cfg = this.modeMap[this.vis.mode] ?? this.modeMap[0];
     if (cfg!.fftSize) this.setupVisContext(cfg!.fftSize);
-    this.vis.shader = cfg!.shader!;
+    if (!cfg!.shader) return;
+    this.vis.shader = cfg!.shader;
     const { vsSource, fsSource } = this.vis.shader;
     const vs = this.compileShader(gl.VERTEX_SHADER, vsSource);
     const fs = this.compileShader(gl.FRAGMENT_SHADER, fsSource);
