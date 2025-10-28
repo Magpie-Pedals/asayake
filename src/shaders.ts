@@ -1,6 +1,6 @@
 import type { AsaShader } from "./asa";
 export const shaders: { [key: string]: AsaShader } = {};
-shaders.shader0 = {
+shaders.nothing = {
   vsSource: `
 attribute float aIndex;
 uniform float uBufferLength;
@@ -18,7 +18,7 @@ void main() {
 }
 `
 };
-shaders.shader1 = {
+shaders.imgTest = {
   vsSource: `
 attribute float aIndex;
 uniform float uBufferLength;
@@ -40,7 +40,7 @@ void main() {
 }
 `
 }
-shaders.shader2 = {
+shaders.stereoBars = {
   vsSource: `
 attribute float aIndex;
 uniform float uBufferLength;
@@ -77,7 +77,7 @@ void main() {
 }
 `
 }
-shaders.shader3 = {
+shaders.stereoColor = {
   vsSource: `
 attribute float aIndex;
 uniform float uBufferLength;
