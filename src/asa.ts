@@ -134,6 +134,8 @@ class Asa {
     this.el.audioPlayer?.pause();
     this.el.asa?.classList.remove('asa-playing');
   }
+  // Update album image texture
+  // Image size might not be power of 2, so set parameters accordingly
   private updateShaderTexture(): void {
     if (!this.vis) return;
     if (!this.vis.img) return;
@@ -155,7 +157,6 @@ class Asa {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
     } else {
-      // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
@@ -163,8 +164,6 @@ class Asa {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
   }
   private updateTrack(trackIndex: number): void {
-    // Update album image texture
-    // Image size might not be power of 2, so set parameters accordingly
     if (!this.vis) return;
     if (this.vis.img) {
       console.log("Setting album image source");
@@ -688,6 +687,10 @@ void main() {
     // Append the album image display
     this.el.albumImage = document.createElement('canvas');
     this.el.albumImage.className = 'asa-album-image';
+    // NOTE: The image will be blurry if canvas size doesn't match display size
+    // Set canvas size to match display size for sharp rendering
+    this.el.albumImage.width = 512;
+    this.el.albumImage.height = 512;
     this.el.asa.appendChild(this.el.albumImage);
     this.el.albumImage.onclick = this.onAlbumImageClick.bind(this);
     this.el.albumImage.oncontextmenu = (e) => {
