@@ -448,12 +448,14 @@ void main() {
 precision mediump float;
 uniform float uWidth;
 uniform float uHeight;
-uniform float uRMSM;
+uniform float uRMSL;
+uniform float uRMSR;
 uniform sampler2D uAlbumImage;
 void main() {
   vec2 uv = gl_FragCoord.xy / vec2(uWidth, uHeight);
   vec4 img = texture2D(uAlbumImage, uv);
-  img = img * uRMSM;
+  img.r *= uRMSL;
+  img.b *= uRMSR;
   gl_FragColor = vec4(img.rgb, 1.0);
 }
 `;
