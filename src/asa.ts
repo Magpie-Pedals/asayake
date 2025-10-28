@@ -472,6 +472,13 @@ void main() {
     if (!this.vis) return;
     const gl = this.vis.ctx;
     if (!gl) return;
+    // Clear the existing program
+    if (this.vis.drawProgram) {
+      gl.deleteProgram(this.vis.drawProgram);
+      gl.deleteBuffer(this.vis.drawBuf);
+      gl.deleteShader;
+      this.vis.drawProgram = null;
+    }
     const cfg = this.modeMap[this.vis.mode] ?? this.modeMap[0];
     if (cfg!.fftSize) this.setupVisContext(cfg!.fftSize);
     this.vis.fn = cfg!.fn.bind(this);
