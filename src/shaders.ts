@@ -1,7 +1,7 @@
 import type { AsaShader } from "./asa";
 export const shaders: { [key: string]: AsaShader } = {};
-shaders.nothing = {
-  vsSource: `
+
+const vertexShaderSource = `
 attribute float aIndex;
 uniform float uBufferLength;
 void main() {
@@ -10,7 +10,10 @@ void main() {
   gl_Position = vec4(x, y, 0, 1);
   gl_PointSize = 10000.0; // Large enough to cover the viewport
 }
-`,
+`;
+
+shaders.nothing = {
+  vsSource: vertexShaderSource,
   fsSource: `
 precision mediump float;
 void main() {
@@ -19,16 +22,7 @@ void main() {
 `
 };
 shaders.imgTest = {
-  vsSource: `
-attribute float aIndex;
-uniform float uBufferLength;
-void main() {
-  float x = -1.0 + 2.0 * (aIndex / (uBufferLength - 1.0));
-  float y = 0.0;
-  gl_Position = vec4(x, y, 0, 1);
-  gl_PointSize = 10000.0; // Large enough to cover the viewport
-}
-`,
+  vsSource: vertexShaderSource,
   fsSource: `
 precision mediump float;
 uniform float uWidth;
@@ -41,16 +35,7 @@ void main() {
 `
 }
 shaders.stereoBars = {
-  vsSource: `
-attribute float aIndex;
-uniform float uBufferLength;
-void main() {
-  float x = -1.0 + 2.0 * (aIndex / (uBufferLength - 1.0));
-  float y = 0.0;
-  gl_Position = vec4(x, y, 0, 1);
-  gl_PointSize = 10000.0; // Large enough to cover the viewport
-}
-`,
+  vsSource: vertexShaderSource,
   fsSource: `
 precision mediump float;
 uniform float uWidth;
@@ -78,16 +63,7 @@ void main() {
 `
 }
 shaders.stereoColor = {
-  vsSource: `
-attribute float aIndex;
-uniform float uBufferLength;
-void main() {
-  float x = -1.0 + 2.0 * (aIndex / (uBufferLength - 1.0));
-  float y = 0.0;
-  gl_Position = vec4(x, y, 0, 1);
-  gl_PointSize = 10000.0; // Large enough to cover the viewport
-}
-`,
+  vsSource: vertexShaderSource,
   fsSource: `
 precision mediump float;
 uniform float uWidth;
@@ -101,6 +77,90 @@ void main() {
   img.r *= uRMSL;
   img.b *= uRMSR;
   gl_FragColor = vec4(img.rgb, 1.0);
+}
+`
+}
+shaders.stereoCASmall = {
+  vsSource: vertexShaderSource,
+  fsSource: `
+precision mediump float;
+uniform float uWidth;
+uniform float uHeight;
+uniform float uRMSM;
+uniform sampler2D uAlbumImage;
+
+void main() {
+  vec2 uv = gl_FragCoord.xy / vec2(uWidth, uHeight);
+  vec2 center = vec2(0.5, 0.5);
+  vec2 toCenter = uv - center;
+  float dist = length(toCenter);
+
+  // Chromatic aberration strength increases towards edges
+  float maxShift = uRMSM * 0.1; // tweak for effect strength
+  vec2 shift = normalize(toCenter) * dist * maxShift;
+
+  // Shift channels in opposite directions
+  float r = texture2D(uAlbumImage, uv + shift).r;
+  float g = texture2D(uAlbumImage, uv).g;
+  float b = texture2D(uAlbumImage, uv - shift).b;
+
+  gl_FragColor = vec4(r, g, b, 1.0);
+}
+`
+}
+shaders.stereoCAHalf = {
+  vsSource: vertexShaderSource,
+  fsSource: `
+precision mediump float;
+uniform float uWidth;
+uniform float uHeight;
+uniform float uRMSM;
+uniform sampler2D uAlbumImage;
+
+void main() {
+  vec2 uv = gl_FragCoord.xy / vec2(uWidth, uHeight);
+  vec2 center = vec2(0.5, 0.5);
+  vec2 toCenter = uv - center;
+  float dist = length(toCenter);
+
+  // Chromatic aberration strength increases towards edges
+  float maxShift = uRMSM * 0.5; // tweak for effect strength
+  vec2 shift = normalize(toCenter) * dist * maxShift;
+
+  // Shift channels in opposite directions
+  float r = texture2D(uAlbumImage, uv + shift).r;
+  float g = texture2D(uAlbumImage, uv).g;
+  float b = texture2D(uAlbumImage, uv - shift).b;
+
+  gl_FragColor = vec4(r, g, b, 1.0);
+}
+`
+}
+shaders.stereoCAFull = {
+  vsSource: vertexShaderSource,
+  fsSource: `
+precision mediump float;
+uniform float uWidth;
+uniform float uHeight;
+uniform float uRMSM;
+uniform sampler2D uAlbumImage;
+
+void main() {
+  vec2 uv = gl_FragCoord.xy / vec2(uWidth, uHeight);
+  vec2 center = vec2(0.5, 0.5);
+  vec2 toCenter = uv - center;
+  float dist = length(toCenter);
+
+  // Chromatic aberration strength increases towards edges
+  float maxShift = uRMSM; // tweak for effect strength
+  vec2 shift = normalize(toCenter) * dist * maxShift;
+
+  // Shift channels in opposite directions
+  float r = texture2D(uAlbumImage, uv + shift).r;
+  float g = texture2D(uAlbumImage, uv).g;
+  float b = texture2D(uAlbumImage, uv - shift).b;
+
+  gl_FragColor = vec4(r, g, b, 1.0);
 }
 `
 }

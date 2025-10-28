@@ -72,10 +72,10 @@ class Asa {
   private isShuffle: boolean = false;
   private vis: AsaVis | null = null;
   private modeMap = [
-    { fftSize: 32, shader: shaders.nothing },
-    { fftSize: 32, shader: shaders.imgTest },
+    { fftSize: 32, shader: shaders.stereoCASmall },
     { fftSize: 32, shader: shaders.stereoBars },
     { fftSize: 32, shader: shaders.stereoColor },
+    { fftSize: 32, shader: shaders.stereoCAFull },
   ];
   constructor(config: AsaConfig) {
     this.config = config;
