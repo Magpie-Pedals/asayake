@@ -769,6 +769,7 @@ class Asa {
       listElement.className = 'asa-playlist-list-item';
       listElement.onclick = async () => {
         await this.yeet(playlistId);
+        this.play();
       };
 
       const infoElement = document.createElement('div');
