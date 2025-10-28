@@ -34,6 +34,7 @@ type AsaVis = {
   drawProgram: WebGLProgram | null;
   drawLocs: any;
   drawBuf: WebGLBuffer | null;
+  albumImageTexture: WebGLTexture | null;
   audioCtx: AudioContext;
   analyserL: AnalyserNode;
   analyserR: AnalyserNode;
@@ -487,7 +488,11 @@ void main() {
       // Create or update texture with correct parameters for NPOT images
       const isPowerOf2 = (value: number) => (value & (value - 1)) === 0;
       const img = this.vis.img;
-      const texture = gl.createTexture();
+      // Only create the texture if it doesn't already exist
+      if (!this.vis.albumImageTexture) {
+        this.vis.albumImageTexture = gl.createTexture();
+      }
+      const texture = this.vis.albumImageTexture;
       gl.bindTexture(gl.TEXTURE_2D, texture);
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
