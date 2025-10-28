@@ -164,3 +164,44 @@ void main() {
 }
 `
 }
+shaders.spectrumAnalyzerSimple = {
+  vsSource: vertexShaderSource,
+  fsSource: `
+    precision mediump float;
+    uniform float uWidth;
+    uniform float uHeight;
+    uniform sampler2D uAnalyserM;
+
+    void main() {
+      gl_FragColor = vec4(0, 0, 0, 0);
+      vec2 uv = gl_FragCoord.xy / vec2(uWidth, uHeight);
+      float index = floor(uv.x * uWidth);
+      float magnitude = texture2D(uAnalyserM, vec2(index / uWidth, 0.0)).r;
+      if (magnitude > uv.y) {
+        gl_FragColor = vec4(1, 1, 1, 1);
+      }
+    }
+  `
+};
+shaders.spectrumAnalyzer = {
+  vsSource: vertexShaderSource,
+  fsSource: `
+    precision mediump float;
+    uniform float uWidth;
+    uniform float uHeight;
+    uniform sampler2D uAnalyserM;
+    uniform sampler2D uAlbumImage;
+
+    void main() {
+      vec2 uv = gl_FragCoord.xy / vec2(uWidth, uHeight);
+      vec4 col = texture2D(uAlbumImage, uv);
+      float index = floor(uv.x * uWidth);
+      float magnitude = texture2D(uAnalyserM, vec2(index / uWidth, 0.0)).r;
+      if (magnitude > uv.y) {
+        col = col.gbra;
+        col *= 1.5;
+      }
+      gl_FragColor = col;
+    }
+  `
+};

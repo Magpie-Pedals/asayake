@@ -28,6 +28,7 @@ export type AsaShader = {
   fsSource: string;
 };
 
+// TODO: A lot of this is no longer needed
 type AsaVis = {
   ctx: WebGLRenderingContext | null;
   drawProgram: WebGLProgram | null;
@@ -72,7 +73,7 @@ class Asa {
   private isShuffle: boolean = false;
   private vis: AsaVis | null = null;
   private modeMap = [
-    { fftSize: 32, shader: shaders.stereoCASmall },
+    { fftSize: 2048, shader: shaders.spectrumAnalyzer },
     { fftSize: 32, shader: shaders.stereoBars },
     { fftSize: 32, shader: shaders.stereoColor },
     { fftSize: 32, shader: shaders.stereoCAFull },
@@ -401,13 +402,30 @@ class Asa {
     gl.uniform1f(locs.uRMSL, this.vis.rmsL);
     gl.uniform1f(locs.uRMSR, this.vis.rmsR);
     // Set analyser data uniforms
-    // Must go from Uint8Array to Float32Array
-    const floatArrayL = Float32Array.from(this.vis.dataArrayL);
-    const floatArrayR = Float32Array.from(this.vis.dataArrayR);
-    const floatArrayM = Float32Array.from(this.vis.dataArrayM);
-    gl.uniform1fv(locs.uAnalyserL, floatArrayL);
-    gl.uniform1fv(locs.uAnalyserR, floatArrayR);
-    gl.uniform1fv(locs.uAnalyserM, floatArrayM);
+    gl.activeTexture(gl.TEXTURE1);
+    const analyserLTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, analyserLTexture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, bufferLength, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, this.vis.dataArrayL);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.uniform1i(locs.uAnalyserL, 1); // Texture unit 1
+
+    gl.activeTexture(gl.TEXTURE2);
+    const analyserRTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, analyserRTexture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, bufferLength, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, this.vis.dataArrayR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.uniform1i(locs.uAnalyserR, 2); // Texture unit 2
+
+    gl.activeTexture(gl.TEXTURE3);
+    const analyserMTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, analyserMTexture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, bufferLength, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, this.vis.dataArrayM);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.uniform1i(locs.uAnalyserM, 3); // Texture unit 3
+
     // Set album image uniform
     gl.activeTexture(gl.TEXTURE0);
     gl.uniform1i(locs.uAlbumImage, 0); // Texture unit 0
