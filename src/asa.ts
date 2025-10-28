@@ -65,7 +65,7 @@ class Asa {
   private isShuffle: boolean = false;
   private vis: AsaVis | null = null;
   private modeMap = [
-    { fftSize: 2048, shader: shaders.stereoCASmall },
+    { fftSize: 2048, shader: shaders.nothing },
     { fftSize: 32, shader: shaders.stereoBars },
     { fftSize: 32, shader: shaders.stereoColor },
     { fftSize: 32, shader: shaders.stereoCAFull },
@@ -427,22 +427,26 @@ class Asa {
     gl.activeTexture(gl.TEXTURE0);
     gl.uniform1i(locs.uAlbumImage, 0); // Texture unit 0
     gl.bindTexture(gl.TEXTURE_2D, this.vis.albumImageTexture);
-    // Prepare index buffer
-    const indices = new Float32Array(bufferLength);
-    for (let i = 0; i < bufferLength; ++i) indices[i] = i;
+
+    // Prepare fullscreen triangle buffer
+    const positions = new Float32Array([
+      -1, -1,
+      3, -1,
+      -1, 3,
+    ]);
     const buf = this.vis.drawBuf || gl.createBuffer();
     this.vis.drawBuf = buf;
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, indices, gl.STREAM_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STREAM_DRAW);
 
     gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    gl.enableVertexAttribArray(locs.aIndex);
-    gl.vertexAttribPointer(locs.aIndex, 1, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(locs.aPosition);
+    gl.vertexAttribPointer(locs.aPosition, 2, gl.FLOAT, false, 0, 0);
 
-    gl.drawArrays(gl.POINTS, 0, bufferLength);
-    gl.disableVertexAttribArray(locs.aIndex);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.disableVertexAttribArray(locs.aPosition);
     gl.useProgram(null);
   }
   private updateVisMode(): void {
@@ -461,7 +465,10 @@ class Asa {
     if (!cfg!.shader) return;
     this.vis.shader = cfg!.shader;
     const { vsSource, fsSource } = this.vis.shader;
-    const vs = this.compileShader(gl.VERTEX_SHADER, vsSource);
+    // Replace aIndex with aPosition in shader sources if needed
+    const patchedVsSource = vsSource.replace(/attribute\s+float\s+aIndex;/, 'attribute vec2 aPosition;');
+    this.vis.shader.vsSource = patchedVsSource;
+    const vs = this.compileShader(gl.VERTEX_SHADER, this.vis.shader.vsSource);
     const fs = this.compileShader(gl.FRAGMENT_SHADER, fsSource);
     if (!vs || !fs) return;
     const prog = gl.createProgram()!;
@@ -470,7 +477,7 @@ class Asa {
     gl.linkProgram(prog);
     this.vis.drawProgram = prog;
     this.vis.drawLocs = {
-      aIndex: gl.getAttribLocation(prog, "aIndex"),
+      aPosition: gl.getAttribLocation(prog, "aPosition"),
       uWidth: gl.getUniformLocation(prog, "uWidth"),
       uHeight: gl.getUniformLocation(prog, "uHeight"),
       uBufferLength: gl.getUniformLocation(prog, "uBufferLength"),

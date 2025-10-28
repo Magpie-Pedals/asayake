@@ -2,13 +2,9 @@ import type { AsaShader } from "./asa";
 export const shaders: { [key: string]: AsaShader } = {};
 
 const vertexShaderSource = `
-attribute float aIndex;
-uniform float uBufferLength;
+attribute vec2 aPosition;
 void main() {
-  float x = -1.0 + 2.0 * (aIndex / (uBufferLength - 1.0));
-  float y = 0.0;
-  gl_Position = vec4(x, y, 0, 1);
-  gl_PointSize = 10000.0; // Large enough to cover the viewport
+  gl_Position = vec4(aPosition, 0.0, 1.0);
 }
 `;
 
