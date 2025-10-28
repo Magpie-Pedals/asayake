@@ -316,63 +316,119 @@ class Asa {
     if (!this.el.albumImage) return;
     if (!this.vis) return;
     if (!this.vis.ctx) return;
-    this.vis.ctx.clearRect(0, 0, this.el.albumImage!.width, this.el.albumImage!.height);
+    const gl = this.vis.ctx;
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   }
+
   private draw1(): void {
     if (!this.el.albumImage) return;
     if (!this.vis) return;
     if (!this.vis.ctx) return;
-    this.vis.ctx.clearRect(0, 0, this.el.albumImage!.width, this.el.albumImage!.height);
-    const yScale = 0.5;
-    const half = Math.floor(this.vis.bufferLength / 2);
-    const barWidth = this.el.albumImage.width / this.vis.bufferLength;
+    const gl = this.vis.ctx;
+    gl.clearColor(0.2, 0.2, 0.8, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
 
-    for (let i = 0; i < half; i++) {
-      const value = this.vis.dataArrayM[i];
-      if (!value) continue;
-      const percent = value / 256;
-      const height = yScale * this.el.albumImage.height * percent;
-      const offset = this.el.albumImage.height - height - 1;
-
-      // Left side
-      let xLeft = i * barWidth;
-      // Right side (mirrored)
-      let xRight = this.el.albumImage.width - (i + 1) * barWidth;
-
-      this.vis.ctx.fillStyle = 'rgba(255,255,255, 0.5)';
-      this.vis.ctx.fillRect(xLeft, offset, barWidth, height);
-      this.vis.ctx.fillRect(xRight, offset, barWidth, height);
-    }
+    // Draw a single white rectangle using scissor as a "bar"
+    gl.enable(gl.SCISSOR_TEST);
+    gl.scissor(10, 10, 30, this.el.albumImage.height - 20);
+    gl.clearColor(1, 1, 1, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.disable(gl.SCISSOR_TEST);
   }
+
   private draw2(): void {
     if (!this.el.albumImage) return;
     if (!this.vis) return;
     if (!this.vis.ctx) return;
-    this.vis.ctx.clearRect(0, 0, this.el.albumImage!.width, this.el.albumImage!.height);
-    const yScale = 0.5;
-    for (let i = 0; i < this.vis.bufferLength; i++) {
-      const value = this.vis.dataArrayM[i];
-      if (!value) continue;
-      const percent = value / 256;
-      const height = yScale * this.el.albumImage.height * percent;
-      const offset = this.el.albumImage.height - height - 1;
-      const barWidth = this.el.albumImage.width / this.vis.bufferLength;
-      this.vis.ctx.fillStyle = 'rgba(255,255,255, 0.5)';
-      this.vis.ctx.fillRect(i * barWidth, offset, barWidth, height);
+    const gl = this.vis.ctx;
+    const width = this.el.albumImage.width;
+    const height = this.el.albumImage.height;
+    const bufferLength = this.vis.bufferLength;
+
+    if (!(this.vis as any)._draw2Program) {
+      const vsSource = `
+        attribute float aIndex;
+        uniform float uBufferLength;
+        void main() {
+          float x = -1.0 + 2.0 * (aIndex / (uBufferLength - 1.0));
+          float y = 0.0;
+          gl_Position = vec4(x, y, 0, 1);
+          gl_PointSize = 10000.0; // Large enough to cover the viewport
+        }
+      `;
+
+      // Fragment shader: solid white
+      const fsSource = `
+        precision mediump float;
+        void main() {
+          gl_FragColor = vec4(0, 1, 1, 1);
+        }
+      `;
+      function compileShader(type: number, src: string) {
+        const shader = gl.createShader(type)!;
+        gl.shaderSource(shader, src);
+        gl.compileShader(shader);
+        return shader;
+      }
+      const vs = compileShader(gl.VERTEX_SHADER, vsSource);
+      const fs = compileShader(gl.FRAGMENT_SHADER, fsSource);
+      const prog = gl.createProgram()!;
+      gl.attachShader(prog, vs);
+      gl.attachShader(prog, fs);
+      gl.linkProgram(prog);
+      (this.vis as any)._draw2Program = prog;
+      (this.vis as any)._draw2Locs = {
+        aIndex: gl.getAttribLocation(prog, "aIndex"),
+        uBufferLength: gl.getUniformLocation(prog, "uBufferLength"),
+        uWidth: gl.getUniformLocation(prog, "uWidth"),
+        uHeight: gl.getUniformLocation(prog, "uHeight"),
+        uBarHeight: gl.getUniformLocation(prog, "uBarHeight"),
+      };
     }
+    const prog = (this.vis as any)._draw2Program;
+    const locs = (this.vis as any)._draw2Locs;
+    gl.useProgram(prog);
+
+    // Set uniforms
+    gl.uniform1f(locs.uBufferLength, bufferLength);
+    gl.uniform1f(locs.uWidth, width);
+    gl.uniform1f(locs.uHeight, height);
+    gl.uniform1f(locs.uBarHeight, height);
+
+    // Prepare index buffer
+    const indices = new Float32Array(bufferLength);
+    for (let i = 0; i < bufferLength; ++i) indices[i] = i;
+    const buf = (this.vis as any)._draw2Buf || gl.createBuffer();
+    (this.vis as any)._draw2Buf = buf;
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, indices, gl.STREAM_DRAW);
+
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    gl.enableVertexAttribArray(locs.aIndex);
+    gl.vertexAttribPointer(locs.aIndex, 1, gl.FLOAT, false, 0, 0);
+
+    // Draw points (each will be a vertical bar)
+    gl.drawArrays(gl.POINTS, 0, bufferLength);
+
+    gl.disableVertexAttribArray(locs.aIndex);
+    gl.useProgram(null);
   }
+
   private draw3(): void {
     if (!this.el.albumImage) return;
     if (!this.vis) return;
     if (!this.vis.ctx) return;
+    const gl = this.vis.ctx;
     const canvas = this.el.albumImage;
-    const ctx = this.vis.ctx;
     const width = canvas.width;
     const height = canvas.height;
     const halfWidth = width / 2;
     const bufferLength = this.vis.bufferLength;
 
-    ctx.clearRect(0, 0, width, height);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.enable(gl.SCISSOR_TEST);
 
     // Left channel: draw from bottom to top on left half, bars extend from left edge toward center
     for (let i = 0; i < bufferLength; i++) {
@@ -381,11 +437,10 @@ class Asa {
       const percent = value / 256;
       const barLength = percent * halfWidth;
       const barHeight = height / bufferLength;
-      // Invert y so low frequencies are at the bottom
       const y = height - (i + 1) * barHeight;
-      ctx.fillStyle = 'rgba(255,255,255, 0.5)';
-      // Invert x: start from left edge, go toward center
-      ctx.fillRect(0, y, barLength, barHeight);
+      gl.scissor(0, y, barLength, barHeight);
+      gl.clearColor(1, 1, 1, 0.5);
+      gl.clear(gl.COLOR_BUFFER_BIT);
     }
 
     // Right channel: draw from bottom to top on right half, bars extend from right edge toward center (mirrored)
@@ -395,25 +450,27 @@ class Asa {
       const percent = value / 256;
       const barLength = percent * halfWidth;
       const barHeight = height / bufferLength;
-      // Invert y so low frequencies are at the bottom
       const y = height - (i + 1) * barHeight;
-      ctx.fillStyle = 'rgba(255,255,255, 0.5)';
-      // Invert x: start from right edge, go toward center
-      ctx.fillRect(width - barLength, y, barLength, barHeight);
+      gl.scissor(width - barLength, y, barLength, barHeight);
+      gl.clearColor(1, 1, 1, 0.5);
+      gl.clear(gl.COLOR_BUFFER_BIT);
     }
+    gl.disable(gl.SCISSOR_TEST);
   }
+
   private draw4(): void {
     if (!this.el.albumImage) return;
     if (!this.vis) return;
     if (!this.vis.ctx) return;
+    const gl = this.vis.ctx;
     const canvas = this.el.albumImage;
-    const ctx = this.vis.ctx;
     const width = canvas.width;
     const height = canvas.height;
     const halfWidth = width / 2;
     const bufferLength = this.vis.bufferLength;
 
-    ctx.clearRect(0, 0, width, height);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.enable(gl.SCISSOR_TEST);
 
     // Left channel: draw from bottom to top on left half, bars extend from left edge toward center
     for (let i = 0; i < bufferLength; i++) {
@@ -422,10 +479,10 @@ class Asa {
       const percent = value / 256;
       const barLength = percent * halfWidth;
       const barHeight = height / bufferLength;
-      // Invert y so low frequencies are at the bottom
       const y = height - (i + 1) * barHeight;
-      ctx.fillStyle = 'rgba(255,255,255, 0.5)';
-      ctx.fillRect(halfWidth - barLength, y, barLength, barHeight);
+      gl.scissor(halfWidth - barLength, y, barLength, barHeight);
+      gl.clearColor(1, 1, 1, 0.5);
+      gl.clear(gl.COLOR_BUFFER_BIT);
     }
 
     // Right channel: draw from bottom to top on right half, bars extend from right edge toward center (mirrored)
@@ -435,26 +492,27 @@ class Asa {
       const percent = value / 256;
       const barLength = percent * halfWidth;
       const barHeight = height / bufferLength;
-      // Invert y so low frequencies are at the bottom
       const y = height - (i + 1) * barHeight;
-      ctx.fillStyle = 'rgba(255,255,255, 0.5)';
-      ctx.fillRect(halfWidth, y, barLength, barHeight);
+      gl.scissor(halfWidth, y, barLength, barHeight);
+      gl.clearColor(1, 1, 1, 0.5);
+      gl.clear(gl.COLOR_BUFFER_BIT);
     }
-
+    gl.disable(gl.SCISSOR_TEST);
   }
+
   private draw5(): void {
     if (!this.el.albumImage) return;
     if (!this.vis) return;
     if (!this.vis.ctx) return;
-
+    const gl = this.vis.ctx;
     const canvas = this.el.albumImage;
-    const ctx = this.vis.ctx;
     const width = canvas.width;
     const height = canvas.height;
     const halfWidth = width / 2;
     const bufferLength = this.vis.bufferLength;
 
-    ctx.clearRect(0, 0, width, height);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.enable(gl.SCISSOR_TEST);
 
     // Left channel: draw from top to bottom on left half, bars extend from left edge toward center
     for (let i = 0; i < bufferLength; i++) {
@@ -464,8 +522,9 @@ class Asa {
       const barLength = percent * halfWidth;
       const barHeight = height / bufferLength;
       const y = i * barHeight;
-      ctx.fillStyle = 'rgba(255,255,255, 0.5)';
-      ctx.fillRect(halfWidth - barLength, y, barLength, barHeight);
+      gl.scissor(halfWidth - barLength, y, barLength, barHeight);
+      gl.clearColor(1, 1, 1, 0.5);
+      gl.clear(gl.COLOR_BUFFER_BIT);
     }
     // Right channel: draw from top to bottom on right half, bars extend from right edge toward center (mirrored)
     for (let i = 0; i < bufferLength; i++) {
@@ -475,22 +534,26 @@ class Asa {
       const barLength = percent * halfWidth;
       const barHeight = height / bufferLength;
       const y = i * barHeight;
-      ctx.fillStyle = 'rgba(255,255,255, 0.5)';
-      ctx.fillRect(halfWidth, y, barLength, barHeight);
+      gl.scissor(halfWidth, y, barLength, barHeight);
+      gl.clearColor(1, 1, 1, 0.5);
+      gl.clear(gl.COLOR_BUFFER_BIT);
     }
+    gl.disable(gl.SCISSOR_TEST);
   }
+
   private draw6(): void {
     if (!this.el.albumImage) return;
     if (!this.vis) return;
     if (!this.vis.ctx) return;
+    const gl = this.vis.ctx;
     const canvas = this.el.albumImage;
-    const ctx = this.vis.ctx;
     const width = canvas.width;
     const height = canvas.height;
     const halfWidth = width / 2;
     const bufferLength = this.vis.bufferLength;
 
-    ctx.clearRect(0, 0, width, height);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.enable(gl.SCISSOR_TEST);
 
     // Left channel: draw from top to bottom on left half, bars extend rightward
     for (let i = 0; i < bufferLength; i++) {
@@ -500,8 +563,9 @@ class Asa {
       const barLength = percent * halfWidth;
       const barHeight = height / bufferLength;
       const y = i * barHeight;
-      ctx.fillStyle = 'rgba(255,255,255, 0.5)';
-      ctx.fillRect(halfWidth - barLength, y, barLength, barHeight);
+      gl.scissor(halfWidth - barLength, y, barLength, barHeight);
+      gl.clearColor(1, 1, 1, 0.5);
+      gl.clear(gl.COLOR_BUFFER_BIT);
     }
 
     // Right channel: draw from bottom to top on right half, bars extend leftward (mirrored)
@@ -512,40 +576,27 @@ class Asa {
       const barLength = percent * halfWidth;
       const barHeight = height / bufferLength;
       const y = height - (i + 1) * barHeight;
-      ctx.fillStyle = 'rgba(255,255,255, 0.5)';
-      ctx.fillRect(halfWidth, y, barLength, barHeight);
+      gl.scissor(halfWidth, y, barLength, barHeight);
+      gl.clearColor(1, 1, 1, 0.5);
+      gl.clear(gl.COLOR_BUFFER_BIT);
     }
+    gl.disable(gl.SCISSOR_TEST);
   }
+
   private draw7(): void {
     if (!this.el.albumImage) return;
     if (!this.vis) return;
     if (!this.vis.ctx) return;
-    this.vis.ctx.clearRect(0, 0, this.el.albumImage!.width, this.el.albumImage!.height);
-    // Check if the image is loaded
-    // Draw vis.img at center
-    const img = this.vis.img;
-    if (!img) return;
-    const canvas = this.el.albumImage;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width;
-    canvas.height = rect.height;
-    const ctx = this.vis.ctx;
-    let drawWidth = canvas.width;
-    let drawHeight = canvas.height;
-    const x = (canvas.width - drawWidth) / 2;
-    const y = (canvas.height - drawHeight) / 2;
-    ctx.drawImage(img, x, y, drawWidth, drawHeight);
-    const imageData = ctx.getImageData(0, 0, drawWidth, drawHeight);
-    const data = imageData.data;
+    // WebGL cannot directly draw images or manipulate pixels like 2D canvas.
+    // For a simple effect, just clear with a color based on RMS.
+    const gl = this.vis.ctx;
     const min = 0.3;
     const scale = 1.0 - min;
-    for (let i = 0; i < data.length; i += 4) {
-      // NOTE: data[i] is red, data[i+1] is green, data[i+2] is blue, data[i+3] is alpha
-      data[i]! *= Math.pow(min + this.vis.rmsM * scale, 0.5);
-      data[i + 1]! *= Math.pow(min + this.vis.rmsL * scale, 0.5);
-      data[i + 2]! *= Math.pow(min + this.vis.rmsR * scale, 0.5);
-    }
-    ctx.putImageData(imageData, 0, 0);
+    const r = Math.pow(min + this.vis.rmsM * scale, 0.5);
+    const g = Math.pow(min + this.vis.rmsL * scale, 0.5);
+    const b = Math.pow(min + this.vis.rmsR * scale, 0.5);
+    gl.clearColor(r, g, b, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   }
   private draw(): void {
     if (!this.vis) return;
