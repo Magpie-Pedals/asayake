@@ -39,14 +39,8 @@ type AsaVis = {
   analyserL: AnalyserNode;
   analyserR: AnalyserNode;
   bufferLength: number;
-  dataArrayL: Uint8Array<ArrayBuffer>;
-  dataArrayR: Uint8Array<ArrayBuffer>;
-  dataArrayM: Uint8Array<ArrayBuffer>;
   timeDomainDataL: Uint8Array<ArrayBuffer>;
   timeDomainDataR: Uint8Array<ArrayBuffer>;
-  rmsLRaw: number;
-  rmsRRaw: number;
-  rmsMRaw: number;
   rmsL: number;
   rmsR: number;
   rmsM: number;
@@ -73,7 +67,7 @@ class Asa {
   private isShuffle: boolean = false;
   private vis: AsaVis | null = null;
   private modeMap = [
-    { fftSize: 2048, shader: shaders.spectrumAnalyzer },
+    { fftSize: 2048, shader: shaders.stereoCASmall },
     { fftSize: 32, shader: shaders.stereoBars },
     { fftSize: 32, shader: shaders.stereoColor },
     { fftSize: 32, shader: shaders.stereoCAFull },
@@ -357,14 +351,17 @@ class Asa {
     if (!this.vis) return;
     // Update audio data
     requestAnimationFrame(this.draw.bind(this));
-    this.vis.analyserL.getByteFrequencyData(this.vis.dataArrayL);
-    this.vis.analyserR.getByteFrequencyData(this.vis.dataArrayR);
+    let dataArrayL: Uint8Array<ArrayBuffer> = new Uint8Array(this.vis.bufferLength);
+    let dataArrayR: Uint8Array<ArrayBuffer> = new Uint8Array(this.vis.bufferLength);
+    let dataArrayM: Uint8Array<ArrayBuffer> = new Uint8Array(this.vis.bufferLength);
+    this.vis.analyserL.getByteFrequencyData(dataArrayL);
+    this.vis.analyserR.getByteFrequencyData(dataArrayR);
     // Merge left and right channels for mono data
     if (this.vis) {
       for (let i = 0; i < this.vis.bufferLength; i++) {
-        const l = this.vis.dataArrayL[i] || 0;
-        const r = this.vis.dataArrayR[i] || 0;
-        this.vis.dataArrayM[i] = (l + r) / 2;
+        const l = dataArrayL[i] || 0;
+        const r = dataArrayR[i] || 0;
+        dataArrayM[i] = (l + r) / 2;
       }
     }
     this.vis.analyserL.getByteTimeDomainData(this.vis.timeDomainDataL);
@@ -378,14 +375,14 @@ class Asa {
       }
       return Math.sqrt(sum / data.length);
     };
-    this.vis.rmsLRaw = rms(this.vis.timeDomainDataL);
-    this.vis.rmsRRaw = rms(this.vis.timeDomainDataR);
+    const rmsLRaw = rms(this.vis.timeDomainDataL);
+    const rmsRRaw = rms(this.vis.timeDomainDataR);
     // Merge rms
-    this.vis.rmsMRaw = (this.vis.rmsLRaw + this.vis.rmsRRaw) / 2;
+    const rmsMRaw = (rmsLRaw + rmsRRaw) / 2;
     const alpha = 0.1; // Smoothing factor (0 < alpha < 1)
-    this.vis.rmsL = this.vis.rmsL * (1 - alpha) + this.vis.rmsLRaw * alpha;
-    this.vis.rmsR = this.vis.rmsR * (1 - alpha) + this.vis.rmsRRaw * alpha;
-    this.vis.rmsM = this.vis.rmsM * (1 - alpha) + this.vis.rmsMRaw * alpha;
+    this.vis.rmsL = this.vis.rmsL * (1 - alpha) + rmsLRaw * alpha;
+    this.vis.rmsR = this.vis.rmsR * (1 - alpha) + rmsRRaw * alpha;
+    this.vis.rmsM = this.vis.rmsM * (1 - alpha) + rmsMRaw * alpha;
 
     // Gl draw routine
     const gl = this.vis.ctx;
@@ -405,7 +402,7 @@ class Asa {
     gl.activeTexture(gl.TEXTURE1);
     const analyserLTexture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, analyserLTexture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, bufferLength, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, this.vis.dataArrayL);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, bufferLength, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, dataArrayL);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.uniform1i(locs.uAnalyserL, 1); // Texture unit 1
@@ -413,7 +410,7 @@ class Asa {
     gl.activeTexture(gl.TEXTURE2);
     const analyserRTexture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, analyserRTexture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, bufferLength, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, this.vis.dataArrayR);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, bufferLength, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, dataArrayR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.uniform1i(locs.uAnalyserR, 2); // Texture unit 2
@@ -421,7 +418,7 @@ class Asa {
     gl.activeTexture(gl.TEXTURE3);
     const analyserMTexture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, analyserMTexture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, bufferLength, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, this.vis.dataArrayM);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, bufferLength, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, dataArrayM);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.uniform1i(locs.uAnalyserM, 3); // Texture unit 3
@@ -507,9 +504,6 @@ class Asa {
       source.connect(analyserR);
       source.connect(audioCtx.destination);
       const bufferLength = analyserL.frequencyBinCount;
-      const dataArrayL = new Uint8Array(bufferLength);
-      const dataArrayR = new Uint8Array(bufferLength);
-      const dataArrayM = new Uint8Array(bufferLength);
       const mode = this.vis?.mode ?? 5;// 0 is none
       this.vis = {
         ctx: ctx,
@@ -521,14 +515,8 @@ class Asa {
         analyserL: analyserL,
         analyserR: analyserR,
         bufferLength: bufferLength,
-        dataArrayL: dataArrayL,
-        dataArrayR: dataArrayR,
-        dataArrayM: dataArrayM,
         timeDomainDataL: new Uint8Array(bufferLength),
         timeDomainDataR: new Uint8Array(bufferLength),
-        rmsLRaw: 0,
-        rmsRRaw: 0,
-        rmsMRaw: 0,
         rmsL: 0,
         rmsR: 0,
         rmsM: 0,
