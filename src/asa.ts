@@ -245,30 +245,6 @@ class Asa {
     };
     timestamp.innerText = `${formatTime(current)} / ${formatTime(duration)}`;
   }
-  private updateVisMode(): void {
-    if (!this.vis) return;
-    const gl = this.vis.ctx;
-    if (!gl) return;
-    const cfg = this.modeMap[this.vis.mode] ?? this.modeMap[0];
-    if (cfg!.fftSize) this.setupVisContext(cfg!.fftSize);
-    this.vis.fn = cfg!.fn.bind(this);
-    const { vsSource, fsSource } = this.vis.fn();
-    const vs = this.compileShader(gl.VERTEX_SHADER, vsSource);
-    const fs = this.compileShader(gl.FRAGMENT_SHADER, fsSource);
-    if (!vs || !fs) return;
-    const prog = gl.createProgram()!;
-    gl.attachShader(prog, vs);
-    gl.attachShader(prog, fs);
-    gl.linkProgram(prog);
-    this.vis.drawProgram = prog;
-    this.vis.drawLocs = {
-      aIndex: gl.getAttribLocation(prog, "aIndex"),
-      uBufferLength: gl.getUniformLocation(prog, "uBufferLength"),
-      uWidth: gl.getUniformLocation(prog, "uWidth"),
-      uHeight: gl.getUniformLocation(prog, "uHeight"),
-      uBarHeight: gl.getUniformLocation(prog, "uBarHeight"),
-    };
-  }
   // Scrubber Events
   private attachScrubberEvents(scrubber: HTMLElement): void {
     const handleScrub = (e: PointerEvent, scrubber: HTMLElement): void => {
@@ -382,20 +358,39 @@ class Asa {
   }
   private draw2(): AsaShader {
     const vsSource = `
-        attribute float aIndex;
-        uniform float uBufferLength;
-        void main() {
-          float x = -1.0 + 2.0 * (aIndex / (uBufferLength - 1.0));
-          float y = 0.0;
-          gl_Position = vec4(x, y, 0, 1);
-          gl_PointSize = 10000.0; // Large enough to cover the viewport
-        }
+attribute float aIndex;
+uniform float uBufferLength;
+void main() {
+  float x = -1.0 + 2.0 * (aIndex / (uBufferLength - 1.0));
+  float y = 0.0;
+  gl_Position = vec4(x, y, 0, 1);
+  gl_PointSize = 10000.0; // Large enough to cover the viewport
+}
       `;
     const fsSource = `
-        precision mediump float;
-        void main() {
-          gl_FragColor = vec4(0, 1, 1, 1);
-        }
+precision mediump float;
+uniform float uWidth;
+uniform float uHeight;
+uniform float uRMSL;
+uniform float uRMSR;
+void main() {
+  float alpha = 0.0;
+  vec2 uv = gl_FragCoord.xy / vec2(uWidth, uHeight);
+  if (uv.x < 0.5) {
+    if (uRMSL < uv.y) {
+      gl_FragColor = vec4(1, 1, 1, alpha);
+    } else {
+      gl_FragColor = vec4(0, 0, 0, 0);
+    }
+  }
+  else {
+    if (uRMSR < uv.y) {
+      gl_FragColor = vec4(1, 1, 1, alpha);
+    } else {
+      gl_FragColor = vec4(0, 0, 0, 0);
+    }
+  }
+}
       `;
     return { vsSource, fsSource };
   }
@@ -441,7 +436,20 @@ class Asa {
     const locs = this.vis.drawLocs;
     gl.useProgram(this.vis.drawProgram);
     // Set uniforms
+    gl.uniform1f(locs.uWidth, this.el.albumImage.width);
+    gl.uniform1f(locs.uHeight, this.el.albumImage.height);
     gl.uniform1f(locs.uBufferLength, bufferLength);
+    gl.uniform1f(locs.uRMSM, this.vis.rmsM);
+    gl.uniform1f(locs.uRMSL, this.vis.rmsL);
+    gl.uniform1f(locs.uRMSR, this.vis.rmsR);
+    // Set analyser data uniforms
+    // Must go from Uint8Array to Float32Array
+    const floatArrayL = Float32Array.from(this.vis.dataArrayL);
+    const floatArrayR = Float32Array.from(this.vis.dataArrayR);
+    const floatArrayM = Float32Array.from(this.vis.dataArrayM);
+    gl.uniform1fv(locs.uAnalyserL, floatArrayL);
+    gl.uniform1fv(locs.uAnalyserR, floatArrayR);
+    gl.uniform1fv(locs.uAnalyserM, floatArrayM);
     // Prepare index buffer
     const indices = new Float32Array(bufferLength);
     for (let i = 0; i < bufferLength; ++i) indices[i] = i;
@@ -459,6 +467,35 @@ class Asa {
     gl.drawArrays(gl.POINTS, 0, bufferLength);
     gl.disableVertexAttribArray(locs.aIndex);
     gl.useProgram(null);
+  }
+  private updateVisMode(): void {
+    if (!this.vis) return;
+    const gl = this.vis.ctx;
+    if (!gl) return;
+    const cfg = this.modeMap[this.vis.mode] ?? this.modeMap[0];
+    if (cfg!.fftSize) this.setupVisContext(cfg!.fftSize);
+    this.vis.fn = cfg!.fn.bind(this);
+    const { vsSource, fsSource } = this.vis.fn();
+    const vs = this.compileShader(gl.VERTEX_SHADER, vsSource);
+    const fs = this.compileShader(gl.FRAGMENT_SHADER, fsSource);
+    if (!vs || !fs) return;
+    const prog = gl.createProgram()!;
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+    this.vis.drawProgram = prog;
+    this.vis.drawLocs = {
+      aIndex: gl.getAttribLocation(prog, "aIndex"),
+      uWidth: gl.getUniformLocation(prog, "uWidth"),
+      uHeight: gl.getUniformLocation(prog, "uHeight"),
+      uBufferLength: gl.getUniformLocation(prog, "uBufferLength"),
+      uAnalyserL: gl.getUniformLocation(prog, "uAnalyserL"),
+      uAnalyserR: gl.getUniformLocation(prog, "uAnalyserR"),
+      uAnalyserM: gl.getUniformLocation(prog, "uAnalyserM"),
+      uRMSL: gl.getUniformLocation(prog, "uRMSL"),
+      uRMSR: gl.getUniformLocation(prog, "uRMSR"),
+      uRMSM: gl.getUniformLocation(prog, "uRMSM")
+    };
   }
   private setupVisContext(fftSize: number = 2048): void {
     if (this.el.albumImage && this.el.audioPlayer) {
