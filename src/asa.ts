@@ -77,6 +77,7 @@ class Asa {
     { fftSize: 2048, fn: this.draw1 },
     { fftSize: 64, fn: this.draw2 },
     { fftSize: 2048, fn: this.draw2 },
+    { fftSize: 2048, fn: this.draw3 },
   ];
   constructor(config: AsaConfig) {
     this.config = config;
@@ -320,40 +321,44 @@ class Asa {
   }
   private draw0(): AsaShader {
     const vsSource = `
-        attribute float aIndex;
-        uniform float uBufferLength;
-        void main() {
-          float x = -1.0 + 2.0 * (aIndex / (uBufferLength - 1.0));
-          float y = 0.0;
-          gl_Position = vec4(x, y, 0, 1);
-          gl_PointSize = 10000.0; // Large enough to cover the viewport
-        }
-      `;
+attribute float aIndex;
+uniform float uBufferLength;
+void main() {
+  float x = -1.0 + 2.0 * (aIndex / (uBufferLength - 1.0));
+  float y = 0.0;
+  gl_Position = vec4(x, y, 0, 1);
+  gl_PointSize = 10000.0; // Large enough to cover the viewport
+}
+`;
     const fsSource = `
-        precision mediump float;
-        void main() {
-          gl_FragColor = vec4(0, 0, 0, 0);
-        }
-      `;
+precision mediump float;
+void main() {
+  gl_FragColor = vec4(0, 0, 0, 0);
+}
+`;
     return { vsSource, fsSource };
   }
   private draw1(): AsaShader {
     const vsSource = `
-        attribute float aIndex;
-        uniform float uBufferLength;
-        void main() {
-          float x = -1.0 + 2.0 * (aIndex / (uBufferLength - 1.0));
-          float y = 0.0;
-          gl_Position = vec4(x, y, 0, 1);
-          gl_PointSize = 10000.0; // Large enough to cover the viewport
-        }
-      `;
+attribute float aIndex;
+uniform float uBufferLength;
+void main() {
+  float x = -1.0 + 2.0 * (aIndex / (uBufferLength - 1.0));
+  float y = 0.0;
+  gl_Position = vec4(x, y, 0, 1);
+  gl_PointSize = 10000.0; // Large enough to cover the viewport
+}
+`;
     const fsSource = `
-        precision mediump float;
-        void main() {
-          gl_FragColor = vec4(0, 1, 0, 1);
-        }
-      `;
+precision mediump float;
+uniform float uWidth;
+uniform float uHeight;
+uniform sampler2D uAlbumImage;
+void main() {
+  vec2 uv = gl_FragCoord.xy / vec2(uWidth, uHeight);
+  gl_FragColor = texture2D(uAlbumImage, uv);
+}
+`;
     return { vsSource, fsSource };
   }
   private draw2(): AsaShader {
@@ -366,7 +371,7 @@ void main() {
   gl_Position = vec4(x, y, 0, 1);
   gl_PointSize = 10000.0; // Large enough to cover the viewport
 }
-      `;
+`;
     const fsSource = `
 precision mediump float;
 uniform float uWidth;
@@ -391,7 +396,33 @@ void main() {
     }
   }
 }
-      `;
+`;
+    return { vsSource, fsSource };
+  }
+  private draw3(): AsaShader {
+    const vsSource = `
+attribute float aIndex;
+uniform float uBufferLength;
+void main() {
+  float x = -1.0 + 2.0 * (aIndex / (uBufferLength - 1.0));
+  float y = 0.0;
+  gl_Position = vec4(x, y, 0, 1);
+  gl_PointSize = 10000.0; // Large enough to cover the viewport
+}
+`;
+    const fsSource = `
+precision mediump float;
+uniform float uWidth;
+uniform float uHeight;
+uniform float uRMSM;
+uniform sampler2D uAlbumImage;
+void main() {
+  vec2 uv = gl_FragCoord.xy / vec2(uWidth, uHeight);
+  vec4 img = texture2D(uAlbumImage, uv);
+  img = img * uRMSM;
+  gl_FragColor = vec4(img.rgb, 1.0);
+}
+`;
     return { vsSource, fsSource };
   }
   private draw(): void {
@@ -450,6 +481,30 @@ void main() {
     gl.uniform1fv(locs.uAnalyserL, floatArrayL);
     gl.uniform1fv(locs.uAnalyserR, floatArrayR);
     gl.uniform1fv(locs.uAnalyserM, floatArrayM);
+    // Set album image uniform
+    // Image size might not be power of 2, so set parameters accordingly
+    if (this.vis.img) {
+      // Create or update texture with correct parameters for NPOT images
+      const isPowerOf2 = (value: number) => (value & (value - 1)) === 0;
+      const img = this.vis.img;
+      const texture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+
+      if (isPowerOf2(img.width) && isPowerOf2(img.height)) {
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+      } else {
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      }
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.uniform1i(locs.uAlbumImage, 0); // Texture unit 0
+    }
     // Prepare index buffer
     const indices = new Float32Array(bufferLength);
     for (let i = 0; i < bufferLength; ++i) indices[i] = i;
@@ -501,7 +556,8 @@ void main() {
       uAnalyserM: gl.getUniformLocation(prog, "uAnalyserM"),
       uRMSL: gl.getUniformLocation(prog, "uRMSL"),
       uRMSR: gl.getUniformLocation(prog, "uRMSR"),
-      uRMSM: gl.getUniformLocation(prog, "uRMSM")
+      uRMSM: gl.getUniformLocation(prog, "uRMSM"),
+      uAlbumImage: gl.getUniformLocation(prog, "uAlbumImage"),
     };
   }
   private setupVisContext(fftSize: number = 2048): void {
