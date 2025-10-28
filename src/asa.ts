@@ -24,8 +24,16 @@ type AsaElements = {
   tracks: HTMLElement[] | null;
 };
 
+type AsaShader = {
+  vsSource: string;
+  fsSource: string;
+};
+
 type AsaVis = {
   ctx: WebGLRenderingContext | null;
+  drawProgram: WebGLProgram | null;
+  drawLocs: any;
+  drawBuf: WebGLBuffer | null;
   audioCtx: AudioContext;
   analyserL: AnalyserNode;
   analyserR: AnalyserNode;
@@ -43,7 +51,7 @@ type AsaVis = {
   rmsM: number;
   mode: number;
   img: HTMLImageElement | null;
-  fn: () => void;
+  fn: () => AsaShader;
 };
 
 type AsaConfig = {
@@ -69,11 +77,6 @@ class Asa {
     { fftSize: 2048, fn: this.draw1 },
     { fftSize: 64, fn: this.draw2 },
     { fftSize: 2048, fn: this.draw2 },
-    { fftSize: 512, fn: this.draw3 },
-    { fftSize: 512, fn: this.draw4 },
-    { fftSize: 512, fn: this.draw5 },
-    { fftSize: 512, fn: this.draw6 },
-    { fftSize: 32, fn: this.draw7 }
   ];
   constructor(config: AsaConfig) {
     this.config = config;
@@ -244,9 +247,27 @@ class Asa {
   }
   private updateVisMode(): void {
     if (!this.vis) return;
+    const gl = this.vis.ctx;
+    if (!gl) return;
     const cfg = this.modeMap[this.vis.mode] ?? this.modeMap[0];
     if (cfg!.fftSize) this.setupVisContext(cfg!.fftSize);
     this.vis.fn = cfg!.fn.bind(this);
+    const { vsSource, fsSource } = this.vis.fn();
+    const vs = this.compileShader(gl.VERTEX_SHADER, vsSource);
+    const fs = this.compileShader(gl.FRAGMENT_SHADER, fsSource);
+    if (!vs || !fs) return;
+    const prog = gl.createProgram()!;
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+    this.vis.drawProgram = prog;
+    this.vis.drawLocs = {
+      aIndex: gl.getAttribLocation(prog, "aIndex"),
+      uBufferLength: gl.getUniformLocation(prog, "uBufferLength"),
+      uWidth: gl.getUniformLocation(prog, "uWidth"),
+      uHeight: gl.getUniformLocation(prog, "uHeight"),
+      uBarHeight: gl.getUniformLocation(prog, "uBarHeight"),
+    };
   }
   // Scrubber Events
   private attachScrubberEvents(scrubber: HTMLElement): void {
@@ -312,41 +333,17 @@ class Asa {
       window.addEventListener('pointerup', onPointerUp);
     });
   }
-  private draw0(): void {
-    if (!this.el.albumImage) return;
-    if (!this.vis) return;
-    if (!this.vis.ctx) return;
+  private compileShader(type: number, src: string): WebGLShader | null {
+    if (!this.vis) return null;
+    if (!this.vis.ctx) return null;
     const gl = this.vis.ctx;
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    const shader = gl.createShader(type)!;
+    gl.shaderSource(shader, src);
+    gl.compileShader(shader);
+    return shader;
   }
-
-  private draw1(): void {
-    if (!this.el.albumImage) return;
-    if (!this.vis) return;
-    if (!this.vis.ctx) return;
-    const gl = this.vis.ctx;
-    gl.clearColor(0.2, 0.2, 0.8, 1.0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-
-    // Draw a single white rectangle using scissor as a "bar"
-    gl.enable(gl.SCISSOR_TEST);
-    gl.scissor(10, 10, 30, this.el.albumImage.height - 20);
-    gl.clearColor(1, 1, 1, 1);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.disable(gl.SCISSOR_TEST);
-  }
-
-  private draw2(): void {
-    if (!this.el.albumImage) return;
-    if (!this.vis) return;
-    if (!this.vis.ctx) return;
-    const gl = this.vis.ctx;
-    const width = this.el.albumImage.width;
-    const height = this.el.albumImage.height;
-    const bufferLength = this.vis.bufferLength;
-
-    if (!(this.vis as any)._draw2Program) {
-      const vsSource = `
+  private draw0(): AsaShader {
+    const vsSource = `
         attribute float aIndex;
         uniform float uBufferLength;
         void main() {
@@ -356,250 +353,55 @@ class Asa {
           gl_PointSize = 10000.0; // Large enough to cover the viewport
         }
       `;
-
-      // Fragment shader: solid white
-      const fsSource = `
+    const fsSource = `
+        precision mediump float;
+        void main() {
+          gl_FragColor = vec4(0, 0, 0, 0);
+        }
+      `;
+    return { vsSource, fsSource };
+  }
+  private draw1(): AsaShader {
+    const vsSource = `
+        attribute float aIndex;
+        uniform float uBufferLength;
+        void main() {
+          float x = -1.0 + 2.0 * (aIndex / (uBufferLength - 1.0));
+          float y = 0.0;
+          gl_Position = vec4(x, y, 0, 1);
+          gl_PointSize = 10000.0; // Large enough to cover the viewport
+        }
+      `;
+    const fsSource = `
+        precision mediump float;
+        void main() {
+          gl_FragColor = vec4(0, 1, 0, 1);
+        }
+      `;
+    return { vsSource, fsSource };
+  }
+  private draw2(): AsaShader {
+    const vsSource = `
+        attribute float aIndex;
+        uniform float uBufferLength;
+        void main() {
+          float x = -1.0 + 2.0 * (aIndex / (uBufferLength - 1.0));
+          float y = 0.0;
+          gl_Position = vec4(x, y, 0, 1);
+          gl_PointSize = 10000.0; // Large enough to cover the viewport
+        }
+      `;
+    const fsSource = `
         precision mediump float;
         void main() {
           gl_FragColor = vec4(0, 1, 1, 1);
         }
       `;
-      function compileShader(type: number, src: string) {
-        const shader = gl.createShader(type)!;
-        gl.shaderSource(shader, src);
-        gl.compileShader(shader);
-        return shader;
-      }
-      const vs = compileShader(gl.VERTEX_SHADER, vsSource);
-      const fs = compileShader(gl.FRAGMENT_SHADER, fsSource);
-      const prog = gl.createProgram()!;
-      gl.attachShader(prog, vs);
-      gl.attachShader(prog, fs);
-      gl.linkProgram(prog);
-      (this.vis as any)._draw2Program = prog;
-      (this.vis as any)._draw2Locs = {
-        aIndex: gl.getAttribLocation(prog, "aIndex"),
-        uBufferLength: gl.getUniformLocation(prog, "uBufferLength"),
-        uWidth: gl.getUniformLocation(prog, "uWidth"),
-        uHeight: gl.getUniformLocation(prog, "uHeight"),
-        uBarHeight: gl.getUniformLocation(prog, "uBarHeight"),
-      };
-    }
-    const prog = (this.vis as any)._draw2Program;
-    const locs = (this.vis as any)._draw2Locs;
-    gl.useProgram(prog);
-
-    // Set uniforms
-    gl.uniform1f(locs.uBufferLength, bufferLength);
-    gl.uniform1f(locs.uWidth, width);
-    gl.uniform1f(locs.uHeight, height);
-    gl.uniform1f(locs.uBarHeight, height);
-
-    // Prepare index buffer
-    const indices = new Float32Array(bufferLength);
-    for (let i = 0; i < bufferLength; ++i) indices[i] = i;
-    const buf = (this.vis as any)._draw2Buf || gl.createBuffer();
-    (this.vis as any)._draw2Buf = buf;
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, indices, gl.STREAM_DRAW);
-
-    gl.clearColor(0, 0, 0, 1);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-
-    gl.enableVertexAttribArray(locs.aIndex);
-    gl.vertexAttribPointer(locs.aIndex, 1, gl.FLOAT, false, 0, 0);
-
-    // Draw points (each will be a vertical bar)
-    gl.drawArrays(gl.POINTS, 0, bufferLength);
-
-    gl.disableVertexAttribArray(locs.aIndex);
-    gl.useProgram(null);
-  }
-
-  private draw3(): void {
-    if (!this.el.albumImage) return;
-    if (!this.vis) return;
-    if (!this.vis.ctx) return;
-    const gl = this.vis.ctx;
-    const canvas = this.el.albumImage;
-    const width = canvas.width;
-    const height = canvas.height;
-    const halfWidth = width / 2;
-    const bufferLength = this.vis.bufferLength;
-
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.enable(gl.SCISSOR_TEST);
-
-    // Left channel: draw from bottom to top on left half, bars extend from left edge toward center
-    for (let i = 0; i < bufferLength; i++) {
-      const value = this.vis.dataArrayL[i];
-      if (!value) continue;
-      const percent = value / 256;
-      const barLength = percent * halfWidth;
-      const barHeight = height / bufferLength;
-      const y = height - (i + 1) * barHeight;
-      gl.scissor(0, y, barLength, barHeight);
-      gl.clearColor(1, 1, 1, 0.5);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-    }
-
-    // Right channel: draw from bottom to top on right half, bars extend from right edge toward center (mirrored)
-    for (let i = 0; i < bufferLength; i++) {
-      const value = this.vis.dataArrayR[i];
-      if (!value) continue;
-      const percent = value / 256;
-      const barLength = percent * halfWidth;
-      const barHeight = height / bufferLength;
-      const y = height - (i + 1) * barHeight;
-      gl.scissor(width - barLength, y, barLength, barHeight);
-      gl.clearColor(1, 1, 1, 0.5);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-    }
-    gl.disable(gl.SCISSOR_TEST);
-  }
-
-  private draw4(): void {
-    if (!this.el.albumImage) return;
-    if (!this.vis) return;
-    if (!this.vis.ctx) return;
-    const gl = this.vis.ctx;
-    const canvas = this.el.albumImage;
-    const width = canvas.width;
-    const height = canvas.height;
-    const halfWidth = width / 2;
-    const bufferLength = this.vis.bufferLength;
-
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.enable(gl.SCISSOR_TEST);
-
-    // Left channel: draw from bottom to top on left half, bars extend from left edge toward center
-    for (let i = 0; i < bufferLength; i++) {
-      const value = this.vis.dataArrayL[i];
-      if (!value) continue;
-      const percent = value / 256;
-      const barLength = percent * halfWidth;
-      const barHeight = height / bufferLength;
-      const y = height - (i + 1) * barHeight;
-      gl.scissor(halfWidth - barLength, y, barLength, barHeight);
-      gl.clearColor(1, 1, 1, 0.5);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-    }
-
-    // Right channel: draw from bottom to top on right half, bars extend from right edge toward center (mirrored)
-    for (let i = 0; i < bufferLength; i++) {
-      const value = this.vis.dataArrayR[i];
-      if (!value) continue;
-      const percent = value / 256;
-      const barLength = percent * halfWidth;
-      const barHeight = height / bufferLength;
-      const y = height - (i + 1) * barHeight;
-      gl.scissor(halfWidth, y, barLength, barHeight);
-      gl.clearColor(1, 1, 1, 0.5);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-    }
-    gl.disable(gl.SCISSOR_TEST);
-  }
-
-  private draw5(): void {
-    if (!this.el.albumImage) return;
-    if (!this.vis) return;
-    if (!this.vis.ctx) return;
-    const gl = this.vis.ctx;
-    const canvas = this.el.albumImage;
-    const width = canvas.width;
-    const height = canvas.height;
-    const halfWidth = width / 2;
-    const bufferLength = this.vis.bufferLength;
-
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.enable(gl.SCISSOR_TEST);
-
-    // Left channel: draw from top to bottom on left half, bars extend from left edge toward center
-    for (let i = 0; i < bufferLength; i++) {
-      const value = this.vis.dataArrayL[i];
-      if (!value) continue;
-      const percent = value / 256;
-      const barLength = percent * halfWidth;
-      const barHeight = height / bufferLength;
-      const y = i * barHeight;
-      gl.scissor(halfWidth - barLength, y, barLength, barHeight);
-      gl.clearColor(1, 1, 1, 0.5);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-    }
-    // Right channel: draw from top to bottom on right half, bars extend from right edge toward center (mirrored)
-    for (let i = 0; i < bufferLength; i++) {
-      const value = this.vis.dataArrayR[i];
-      if (!value) continue;
-      const percent = value / 256;
-      const barLength = percent * halfWidth;
-      const barHeight = height / bufferLength;
-      const y = i * barHeight;
-      gl.scissor(halfWidth, y, barLength, barHeight);
-      gl.clearColor(1, 1, 1, 0.5);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-    }
-    gl.disable(gl.SCISSOR_TEST);
-  }
-
-  private draw6(): void {
-    if (!this.el.albumImage) return;
-    if (!this.vis) return;
-    if (!this.vis.ctx) return;
-    const gl = this.vis.ctx;
-    const canvas = this.el.albumImage;
-    const width = canvas.width;
-    const height = canvas.height;
-    const halfWidth = width / 2;
-    const bufferLength = this.vis.bufferLength;
-
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.enable(gl.SCISSOR_TEST);
-
-    // Left channel: draw from top to bottom on left half, bars extend rightward
-    for (let i = 0; i < bufferLength; i++) {
-      const value = this.vis.dataArrayL[i];
-      if (!value) continue;
-      const percent = value / 256;
-      const barLength = percent * halfWidth;
-      const barHeight = height / bufferLength;
-      const y = i * barHeight;
-      gl.scissor(halfWidth - barLength, y, barLength, barHeight);
-      gl.clearColor(1, 1, 1, 0.5);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-    }
-
-    // Right channel: draw from bottom to top on right half, bars extend leftward (mirrored)
-    for (let i = 0; i < bufferLength; i++) {
-      const value = this.vis.dataArrayR[i];
-      if (!value) continue;
-      const percent = value / 256;
-      const barLength = percent * halfWidth;
-      const barHeight = height / bufferLength;
-      const y = height - (i + 1) * barHeight;
-      gl.scissor(halfWidth, y, barLength, barHeight);
-      gl.clearColor(1, 1, 1, 0.5);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-    }
-    gl.disable(gl.SCISSOR_TEST);
-  }
-
-  private draw7(): void {
-    if (!this.el.albumImage) return;
-    if (!this.vis) return;
-    if (!this.vis.ctx) return;
-    // WebGL cannot directly draw images or manipulate pixels like 2D canvas.
-    // For a simple effect, just clear with a color based on RMS.
-    const gl = this.vis.ctx;
-    const min = 0.3;
-    const scale = 1.0 - min;
-    const r = Math.pow(min + this.vis.rmsM * scale, 0.5);
-    const g = Math.pow(min + this.vis.rmsL * scale, 0.5);
-    const b = Math.pow(min + this.vis.rmsR * scale, 0.5);
-    gl.clearColor(r, g, b, 1.0);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    return { vsSource, fsSource };
   }
   private draw(): void {
     if (!this.vis) return;
+    // Update audio data
     requestAnimationFrame(this.draw.bind(this));
     this.vis.analyserL.getByteFrequencyData(this.vis.dataArrayL);
     this.vis.analyserR.getByteFrequencyData(this.vis.dataArrayR);
@@ -630,7 +432,33 @@ class Asa {
     this.vis.rmsL = this.vis.rmsL * (1 - alpha) + this.vis.rmsLRaw * alpha;
     this.vis.rmsR = this.vis.rmsR * (1 - alpha) + this.vis.rmsRRaw * alpha;
     this.vis.rmsM = this.vis.rmsM * (1 - alpha) + this.vis.rmsMRaw * alpha;
-    this.vis.fn();
+
+    // Gl draw routine
+    const gl = this.vis.ctx;
+    if (!gl) return;
+    if (!this.el.albumImage) return;
+    const bufferLength = this.vis.bufferLength;
+    const locs = this.vis.drawLocs;
+    gl.useProgram(this.vis.drawProgram);
+    // Set uniforms
+    gl.uniform1f(locs.uBufferLength, bufferLength);
+    // Prepare index buffer
+    const indices = new Float32Array(bufferLength);
+    for (let i = 0; i < bufferLength; ++i) indices[i] = i;
+    const buf = this.vis.drawBuf || gl.createBuffer();
+    this.vis.drawBuf = buf;
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, indices, gl.STREAM_DRAW);
+
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    gl.enableVertexAttribArray(locs.aIndex);
+    gl.vertexAttribPointer(locs.aIndex, 1, gl.FLOAT, false, 0, 0);
+
+    gl.drawArrays(gl.POINTS, 0, bufferLength);
+    gl.disableVertexAttribArray(locs.aIndex);
+    gl.useProgram(null);
   }
   private setupVisContext(fftSize: number = 2048): void {
     if (this.el.albumImage && this.el.audioPlayer) {
@@ -658,6 +486,9 @@ class Asa {
       const mode = this.vis?.mode || 1;// 0 is none
       this.vis = {
         ctx: ctx,
+        drawProgram: null,
+        drawLocs: null,
+        drawBuf: null,
         audioCtx: audioCtx,
         analyserL: analyserL,
         analyserR: analyserR,
@@ -675,7 +506,7 @@ class Asa {
         rmsM: 0,
         mode: mode,
         img: this.vis?.img ?? new Image(), // Will be set later
-        fn: () => { },// Will be set later
+        fn: this.draw0.bind(this),
       };
 
       this.el.audioPlayer.onplay = () => {
