@@ -193,6 +193,7 @@ void main() {
   vec4 col = texture2D(uAlbumImage, uv);
   float index = floor(uv.x * uWidth);
   float magnitude = texture2D(uAnalyserM, vec2(index / uWidth, 0.0)).r;
+  magnitude /= 2.0;
   if (magnitude > uv.y) {
     col = col.gbra;
     col *= 1.5;

@@ -8,6 +8,10 @@ import type {
   AsaPlaylistList,
 } from './types.ts';
 
+export type AsaShader = {
+  vsSource: string;
+  fsSource: string;
+};
 
 type AsaElements = {
   playerTarget: HTMLElement;
@@ -23,12 +27,6 @@ type AsaElements = {
   tracks: HTMLElement[] | null;
 };
 
-export type AsaShader = {
-  vsSource: string;
-  fsSource: string;
-};
-
-// TODO: A lot of this is no longer needed
 type AsaVis = {
   ctx: WebGLRenderingContext | null;
   drawProgram: WebGLProgram | null;
@@ -65,8 +63,8 @@ class Asa {
   private isShuffle: boolean = false;
   private vis: AsaVis | null = null;
   private modeMap = [
-    { fftSize: 2048, shader: shaders.nothing },
-    { fftSize: 32, shader: shaders.stereoBars },
+    { fftSize: 32, shader: shaders.nothing },
+    { fftSize: 2048, shader: shaders.spectrumAnalyzer },
     { fftSize: 32, shader: shaders.stereoColor },
     { fftSize: 32, shader: shaders.stereoCAFull },
   ];
@@ -511,7 +509,7 @@ class Asa {
       source.connect(analyserR);
       source.connect(audioCtx.destination);
       const bufferLength = analyserL.frequencyBinCount;
-      const mode = this.vis?.mode ?? 5;// 0 is none
+      const mode = this.vis?.mode ?? 0;// 0 is none
       this.vis = {
         ctx: ctx,
         drawProgram: null,
