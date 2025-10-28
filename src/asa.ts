@@ -25,7 +25,7 @@ type AsaElements = {
 };
 
 type AsaVis = {
-  ctx: CanvasRenderingContext2D | null;
+  ctx: WebGLRenderingContext | null;
   audioCtx: AudioContext;
   analyserL: AnalyserNode;
   analyserR: AnalyserNode;
@@ -583,7 +583,7 @@ class Asa {
   }
   private setupVisContext(fftSize: number = 2048): void {
     if (this.el.albumImage && this.el.audioPlayer) {
-      const ctx = this.el.albumImage.getContext('2d');
+      const ctx = this.el.albumImage.getContext('webgl');
       if (this.vis && this.vis.audioCtx) {
         this.vis.audioCtx.close();
       }
