@@ -1,4 +1,3 @@
-console.log("Hello, World!");
 
 import type {
   AsaMasterList,
@@ -135,7 +134,43 @@ class Asa {
     this.el.audioPlayer?.pause();
     this.el.asa?.classList.remove('asa-playing');
   }
+  private updateShaderTexture(): void {
+    if (!this.vis) return;
+    if (!this.vis.img) return;
+    const gl = this.vis.ctx;
+    if (!gl) return;
+    console.log("Album image loaded, updating texture");
+    // Create or update texture with correct parameters for NPOT images
+    const isPowerOf2 = (value: number) => (value & (value - 1)) === 0;
+    const img = this.vis.img;
+    this.vis.albumImageTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.vis.albumImageTexture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+
+    if (isPowerOf2(img.width) && isPowerOf2(img.height)) {
+      gl.generateMipmap(gl.TEXTURE_2D);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+    } else {
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    }
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  }
   private updateTrack(trackIndex: number): void {
+    // Update album image texture
+    // Image size might not be power of 2, so set parameters accordingly
+    if (!this.vis) return;
+    if (this.vis.img) {
+      console.log("Setting album image source");
+      this.vis.img.onload = () => {
+        this.updateShaderTexture();
+      };
+    }
+    // Update audio source and metadata display
     const track = this.playlist[trackIndex];
     if (!track) {
       console.error(`Track at index ${trackIndex} not found in playlist`);
@@ -176,10 +211,8 @@ class Asa {
     this.el.nowPlayingArtist!.innerText = track.artist;
     this.el.nowPlayingAlbum!.innerText = track.albumTitle;
     for (const [index, trackEl] of (this.el.tracks ?? []).entries()) {
-      console.log(`Checking track element at index ${index}`);
       trackEl.classList.remove('asa-track-playing');
       if (index === trackIndex) {
-        console.log(`found: ${index}`);
         trackEl.classList.add('asa-track-playing');
       }
     }
@@ -208,7 +241,8 @@ class Asa {
     if (this.el.audioPlayer && this.el.audioPlayer.paused) {
       this.play();
     }
-    this.vis.mode = (this.vis.mode + 1) % this.modeMap.length;
+    this.vis.mode += 1;
+    this.vis.mode = this.vis.mode % this.modeMap.length;
     console.log(`Visualization mode changed to ${this.vis.mode}`);
     this.updateVisMode();
   }
@@ -216,7 +250,6 @@ class Asa {
     this.isShuffle = !this.isShuffle;
   }
   private onPlaylistClick(trackIndex: number): void {
-    console.log(`Track ${trackIndex} clicked`);
     this.updateTrack(trackIndex);
     this.play();
     this.trackIndex = trackIndex;
@@ -483,33 +516,9 @@ void main() {
     gl.uniform1fv(locs.uAnalyserR, floatArrayR);
     gl.uniform1fv(locs.uAnalyserM, floatArrayM);
     // Set album image uniform
-    // Image size might not be power of 2, so set parameters accordingly
-    if (this.vis.img) {
-      // Create or update texture with correct parameters for NPOT images
-      const isPowerOf2 = (value: number) => (value & (value - 1)) === 0;
-      const img = this.vis.img;
-      // Only create the texture if it doesn't already exist
-      if (!this.vis.albumImageTexture) {
-        this.vis.albumImageTexture = gl.createTexture();
-      }
-      const texture = this.vis.albumImageTexture;
-      gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-
-      if (isPowerOf2(img.width) && isPowerOf2(img.height)) {
-        gl.generateMipmap(gl.TEXTURE_2D);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-      } else {
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      }
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-      gl.uniform1i(locs.uAlbumImage, 0); // Texture unit 0
-    }
+    gl.activeTexture(gl.TEXTURE0);
+    gl.uniform1i(locs.uAlbumImage, 0); // Texture unit 0
+    gl.bindTexture(gl.TEXTURE_2D, this.vis.albumImageTexture);
     // Prepare index buffer
     const indices = new Float32Array(bufferLength);
     for (let i = 0; i < bufferLength; ++i) indices[i] = i;
@@ -564,6 +573,7 @@ void main() {
       uRMSM: gl.getUniformLocation(prog, "uRMSM"),
       uAlbumImage: gl.getUniformLocation(prog, "uAlbumImage"),
     };
+    this.updateShaderTexture();
   }
   private setupVisContext(fftSize: number = 2048): void {
     if (this.el.albumImage && this.el.audioPlayer) {
@@ -588,12 +598,13 @@ void main() {
       const dataArrayL = new Uint8Array(bufferLength);
       const dataArrayR = new Uint8Array(bufferLength);
       const dataArrayM = new Uint8Array(bufferLength);
-      const mode = this.vis?.mode || 1;// 0 is none
+      const mode = this.vis?.mode ?? 5;// 0 is none
       this.vis = {
         ctx: ctx,
         drawProgram: null,
         drawLocs: null,
         drawBuf: null,
+        albumImageTexture: null,
         audioCtx: audioCtx,
         analyserL: analyserL,
         analyserR: analyserR,
@@ -615,10 +626,21 @@ void main() {
       };
 
       this.el.audioPlayer.onplay = () => {
-        console.log("Resuming audio context");
         audioCtx.resume();
         this.draw();
       };
+
+      // Create default 1x1 white texture to avoid null texture issues
+      if (ctx) {
+        this.vis.albumImageTexture = ctx.createTexture();
+        ctx.bindTexture(ctx.TEXTURE_2D, this.vis.albumImageTexture);
+        const defaultPixel = new Uint8Array([255, 255, 255, 255]); // White pixel
+        ctx.texImage2D(ctx.TEXTURE_2D, 0, ctx.RGBA, 1, 1, 0, ctx.RGBA, ctx.UNSIGNED_BYTE, defaultPixel);
+        ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_MIN_FILTER, ctx.LINEAR);
+        ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_MAG_FILTER, ctx.LINEAR);
+        ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_WRAP_S, ctx.CLAMP_TO_EDGE);
+        ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_WRAP_T, ctx.CLAMP_TO_EDGE);
+      }
     }
   }
   private initPlayer(playlist: AsaPlaylistInternal): void {
@@ -666,7 +688,6 @@ void main() {
     this.el.albumImage.onclick = this.onAlbumImageClick.bind(this);
     this.el.albumImage.oncontextmenu = (e) => {
       e.preventDefault();
-
     }
 
     // Add the control elements
@@ -751,7 +772,6 @@ void main() {
     if (!this.meta.playlists) return;
     this.el.playlistTarget.innerHTML = '';
     for (const [playlistId, playlistData] of Object.entries(this.meta.playlists)) {
-      console.log(`Adding playlist ${playlistId}: ${JSON.stringify(playlistData)}`);
       const listElement = document.createElement('div');
       listElement.className = 'asa-playlist-list-item';
       listElement.onclick = async () => {
@@ -813,14 +833,13 @@ void main() {
       }
       this.playlist = Asa.makePlaylistInternal(this.meta.master, playlistRaw);
     }
-    console.log("Playlist:", this.playlist);
     this.initPlaylistList();
     this.initPlayer(this.playlist);
-    this.updateTrack(0);
     // Set up the audio context
     this.setupVisContext();
     // Make sure we have the right draw function
     this.updateVisMode();
+    this.updateTrack(0);
   }
 }
 
