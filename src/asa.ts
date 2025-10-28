@@ -39,8 +39,6 @@ type AsaVis = {
   analyserL: AnalyserNode;
   analyserR: AnalyserNode;
   bufferLength: number;
-  timeDomainDataL: Uint8Array<ArrayBuffer>;
-  timeDomainDataR: Uint8Array<ArrayBuffer>;
   rmsL: number;
   rmsR: number;
   rmsM: number;
@@ -364,8 +362,10 @@ class Asa {
         dataArrayM[i] = (l + r) / 2;
       }
     }
-    this.vis.analyserL.getByteTimeDomainData(this.vis.timeDomainDataL);
-    this.vis.analyserR.getByteTimeDomainData(this.vis.timeDomainDataR);
+    const timeDomainDataL = new Uint8Array(this.vis.bufferLength);
+    const timeDomainDataR = new Uint8Array(this.vis.bufferLength);
+    this.vis.analyserL.getByteTimeDomainData(timeDomainDataL);
+    this.vis.analyserR.getByteTimeDomainData(timeDomainDataR);
     // Calculate rms from a buffer
     const rms = (data: Uint8Array) => {
       let sum = 0;
@@ -375,8 +375,8 @@ class Asa {
       }
       return Math.sqrt(sum / data.length);
     };
-    const rmsLRaw = rms(this.vis.timeDomainDataL);
-    const rmsRRaw = rms(this.vis.timeDomainDataR);
+    const rmsLRaw = rms(timeDomainDataL);
+    const rmsRRaw = rms(timeDomainDataR);
     // Merge rms
     const rmsMRaw = (rmsLRaw + rmsRRaw) / 2;
     const alpha = 0.1; // Smoothing factor (0 < alpha < 1)
@@ -515,8 +515,6 @@ class Asa {
         analyserL: analyserL,
         analyserR: analyserR,
         bufferLength: bufferLength,
-        timeDomainDataL: new Uint8Array(bufferLength),
-        timeDomainDataR: new Uint8Array(bufferLength),
         rmsL: 0,
         rmsR: 0,
         rmsM: 0,
