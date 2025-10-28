@@ -96,6 +96,7 @@ body {
   margin-bottom: var(--asa-sh);
   border-radius: 0.5rem;
   max-height: 15rem;
+  min-height: 15rem;
   overflow: scroll;
 }
 .asa-track {
