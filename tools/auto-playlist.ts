@@ -16,10 +16,20 @@ for (const [key, data] of Object.entries(metadata)) {
     playlists[album] = {
       title: album,
       albumImageUri: data.albumImageUri,
+      date: data.albumDate,
+      artist: data.artist,
       trackIds: [],
     };
   }
   playlists[album].trackIds.push(key);
+  // If we have multiple artists set to Various Artists
+  if (playlists[album].artist !== data.artist) {
+    playlists[album].artist = 'Various Artists';
+  }
+  // If we have multiple dates, set to the latest date
+  if (playlists[album].date < data.albumDate) {
+    playlists[album].date = data.albumDate;
+  }
 }
 
 console.log(`Found ${Object.keys(playlists).length} albums.`);

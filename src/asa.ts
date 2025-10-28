@@ -771,10 +771,25 @@ class Asa {
         await this.yeet(playlistId);
       };
 
+      const infoElement = document.createElement('div');
+      infoElement.className = 'asa-playlist-list-item-info';
+
       const titleElement = document.createElement('div');
       titleElement.className = 'asa-playlist-list-item-title';
       titleElement.innerText = playlistData.title;
-      listElement.appendChild(titleElement);
+      infoElement.appendChild(titleElement);
+
+      const artistElement = document.createElement('div');
+      artistElement.className = 'asa-playlist-list-item-artist';
+      artistElement.innerText = playlistData.artist || '';
+      infoElement.appendChild(artistElement);
+
+      const dateElement = document.createElement('div');
+      dateElement.className = 'asa-playlist-list-item-date';
+      dateElement.innerText = new Date(playlistData.date).toLocaleDateString();
+      infoElement.appendChild(dateElement);
+
+      listElement.appendChild(infoElement);
 
       const coverElement = document.createElement('div');
       coverElement.className = 'asa-playlist-list-item-cover';
