@@ -51,7 +51,7 @@ type AsaVis = {
   rmsM: number;
   mode: number;
   img: HTMLImageElement | null;
-  fn: () => AsaShader;
+  shader: AsaShader;
 };
 
 type AsaConfig = {
@@ -71,13 +71,117 @@ class Asa {
   private trackIndex: number = 0;
   private isShuffle: boolean = false;
   private vis: AsaVis | null = null;
+  private shader0: AsaShader = {
+    vsSource: `
+attribute float aIndex;
+uniform float uBufferLength;
+void main() {
+  float x = -1.0 + 2.0 * (aIndex / (uBufferLength - 1.0));
+  float y = 0.0;
+  gl_Position = vec4(x, y, 0, 1);
+  gl_PointSize = 10000.0; // Large enough to cover the viewport
+}
+`,
+    fsSource: `
+precision mediump float;
+void main() {
+  gl_FragColor = vec4(0, 0, 0, 0);
+}
+`
+  };
+  private shader1: AsaShader = {
+    vsSource: `
+attribute float aIndex;
+uniform float uBufferLength;
+void main() {
+  float x = -1.0 + 2.0 * (aIndex / (uBufferLength - 1.0));
+  float y = 0.0;
+  gl_Position = vec4(x, y, 0, 1);
+  gl_PointSize = 10000.0; // Large enough to cover the viewport
+}
+`,
+    fsSource: `
+precision mediump float;
+uniform float uWidth;
+uniform float uHeight;
+uniform sampler2D uAlbumImage;
+void main() {
+  vec2 uv = gl_FragCoord.xy / vec2(uWidth, uHeight);
+  gl_FragColor = texture2D(uAlbumImage, uv);
+}
+`
+  }
+  private shader2: AsaShader = {
+    vsSource: `
+attribute float aIndex;
+uniform float uBufferLength;
+void main() {
+  float x = -1.0 + 2.0 * (aIndex / (uBufferLength - 1.0));
+  float y = 0.0;
+  gl_Position = vec4(x, y, 0, 1);
+  gl_PointSize = 10000.0; // Large enough to cover the viewport
+}
+`,
+    fsSource: `
+precision mediump float;
+uniform float uWidth;
+uniform float uHeight;
+uniform float uRMSL;
+uniform float uRMSR;
+void main() {
+  float alpha = 0.0;
+  vec2 uv = gl_FragCoord.xy / vec2(uWidth, uHeight);
+  if (uv.x < 0.5) {
+    if (uRMSL < uv.y) {
+      gl_FragColor = vec4(1, 1, 1, alpha);
+    } else {
+      gl_FragColor = vec4(0, 0, 0, 0);
+    }
+  }
+  else {
+    if (uRMSR < uv.y) {
+      gl_FragColor = vec4(1, 1, 1, alpha);
+    } else {
+      gl_FragColor = vec4(0, 0, 0, 0);
+    }
+  }
+}
+`
+  }
+  private shader3: AsaShader = {
+    vsSource: `
+attribute float aIndex;
+uniform float uBufferLength;
+void main() {
+  float x = -1.0 + 2.0 * (aIndex / (uBufferLength - 1.0));
+  float y = 0.0;
+  gl_Position = vec4(x, y, 0, 1);
+  gl_PointSize = 10000.0; // Large enough to cover the viewport
+}
+`,
+    fsSource: `
+precision mediump float;
+uniform float uWidth;
+uniform float uHeight;
+uniform float uRMSL;
+uniform float uRMSR;
+uniform sampler2D uAlbumImage;
+void main() {
+  vec2 uv = gl_FragCoord.xy / vec2(uWidth, uHeight);
+  vec4 img = texture2D(uAlbumImage, uv);
+  img.r *= uRMSL;
+  img.b *= uRMSR;
+  gl_FragColor = vec4(img.rgb, 1.0);
+}
+`
+  }
   private modeMap = [
-    { fftSize: 32, fn: this.draw0 },
-    { fftSize: 64, fn: this.draw1 },
-    { fftSize: 2048, fn: this.draw1 },
-    { fftSize: 64, fn: this.draw2 },
-    { fftSize: 2048, fn: this.draw2 },
-    { fftSize: 2048, fn: this.draw3 },
+    { fftSize: 32, shader: this.shader0 },
+    { fftSize: 64, shader: this.shader1 },
+    { fftSize: 2048, shader: this.shader1 },
+    { fftSize: 64, shader: this.shader2 },
+    { fftSize: 2048, shader: this.shader2 },
+    { fftSize: 2048, shader: this.shader3 },
   ];
   constructor(config: AsaConfig) {
     this.config = config;
@@ -354,114 +458,6 @@ class Asa {
     gl.compileShader(shader);
     return shader;
   }
-  private draw0(): AsaShader {
-    const vsSource = `
-attribute float aIndex;
-uniform float uBufferLength;
-void main() {
-  float x = -1.0 + 2.0 * (aIndex / (uBufferLength - 1.0));
-  float y = 0.0;
-  gl_Position = vec4(x, y, 0, 1);
-  gl_PointSize = 10000.0; // Large enough to cover the viewport
-}
-`;
-    const fsSource = `
-precision mediump float;
-void main() {
-  gl_FragColor = vec4(0, 0, 0, 0);
-}
-`;
-    return { vsSource, fsSource };
-  }
-  private draw1(): AsaShader {
-    const vsSource = `
-attribute float aIndex;
-uniform float uBufferLength;
-void main() {
-  float x = -1.0 + 2.0 * (aIndex / (uBufferLength - 1.0));
-  float y = 0.0;
-  gl_Position = vec4(x, y, 0, 1);
-  gl_PointSize = 10000.0; // Large enough to cover the viewport
-}
-`;
-    const fsSource = `
-precision mediump float;
-uniform float uWidth;
-uniform float uHeight;
-uniform sampler2D uAlbumImage;
-void main() {
-  vec2 uv = gl_FragCoord.xy / vec2(uWidth, uHeight);
-  gl_FragColor = texture2D(uAlbumImage, uv);
-}
-`;
-    return { vsSource, fsSource };
-  }
-  private draw2(): AsaShader {
-    const vsSource = `
-attribute float aIndex;
-uniform float uBufferLength;
-void main() {
-  float x = -1.0 + 2.0 * (aIndex / (uBufferLength - 1.0));
-  float y = 0.0;
-  gl_Position = vec4(x, y, 0, 1);
-  gl_PointSize = 10000.0; // Large enough to cover the viewport
-}
-`;
-    const fsSource = `
-precision mediump float;
-uniform float uWidth;
-uniform float uHeight;
-uniform float uRMSL;
-uniform float uRMSR;
-void main() {
-  float alpha = 0.0;
-  vec2 uv = gl_FragCoord.xy / vec2(uWidth, uHeight);
-  if (uv.x < 0.5) {
-    if (uRMSL < uv.y) {
-      gl_FragColor = vec4(1, 1, 1, alpha);
-    } else {
-      gl_FragColor = vec4(0, 0, 0, 0);
-    }
-  }
-  else {
-    if (uRMSR < uv.y) {
-      gl_FragColor = vec4(1, 1, 1, alpha);
-    } else {
-      gl_FragColor = vec4(0, 0, 0, 0);
-    }
-  }
-}
-`;
-    return { vsSource, fsSource };
-  }
-  private draw3(): AsaShader {
-    const vsSource = `
-attribute float aIndex;
-uniform float uBufferLength;
-void main() {
-  float x = -1.0 + 2.0 * (aIndex / (uBufferLength - 1.0));
-  float y = 0.0;
-  gl_Position = vec4(x, y, 0, 1);
-  gl_PointSize = 10000.0; // Large enough to cover the viewport
-}
-`;
-    const fsSource = `
-precision mediump float;
-uniform float uWidth;
-uniform float uHeight;
-uniform float uRMSL;
-uniform float uRMSR;
-uniform sampler2D uAlbumImage;
-void main() {
-  vec2 uv = gl_FragCoord.xy / vec2(uWidth, uHeight);
-  vec4 img = texture2D(uAlbumImage, uv);
-  img.r *= uRMSL;
-  img.b *= uRMSR;
-  gl_FragColor = vec4(img.rgb, 1.0);
-}
-`;
-    return { vsSource, fsSource };
-  }
   private draw(): void {
     if (!this.vis) return;
     // Update audio data
@@ -553,8 +549,8 @@ void main() {
     }
     const cfg = this.modeMap[this.vis.mode] ?? this.modeMap[0];
     if (cfg!.fftSize) this.setupVisContext(cfg!.fftSize);
-    this.vis.fn = cfg!.fn.bind(this);
-    const { vsSource, fsSource } = this.vis.fn();
+    this.vis.shader = cfg!.shader;
+    const { vsSource, fsSource } = this.vis.shader;
     const vs = this.compileShader(gl.VERTEX_SHADER, vsSource);
     const fs = this.compileShader(gl.FRAGMENT_SHADER, fsSource);
     if (!vs || !fs) return;
@@ -625,7 +621,7 @@ void main() {
         rmsM: 0,
         mode: mode,
         img: this.vis?.img ?? new Image(), // Will be set later
-        fn: this.draw0.bind(this),
+        shader: this.shader0,
       };
 
       this.el.audioPlayer.onplay = () => {
@@ -656,7 +652,7 @@ void main() {
       const trackElement = document.createElement('div');
       trackElement.className = 'asa-track';
       trackElement.onclick = () => this.onPlaylistClick(playlist.indexOf(track));
-      trackElement.innerHTML = `${track.artist} - ${track.title}`;
+      trackElement.innerHTML = `${track.artist} - ${track.title} `;
       playlistElement.appendChild(trackElement);
       this.el.tracks?.push(trackElement);
     }
