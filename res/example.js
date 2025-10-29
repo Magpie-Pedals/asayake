@@ -32,7 +32,12 @@ const asaConfig = {
   pathPrefix: '../',
   playerElement: document.getElementById('asa-player-container'),
   playlistListElement: document.getElementById('asa-playlist-list-container'),
+  log: true,
 };
 
-const asa = new Asa(asaConfig);
-asa.yeet(playlistSimple);
+async function runDemo() {
+  const asa = new Asa(asaConfig);
+  await asa.yeet(playlistSimple);
+  asa.printClassNames();
+}
+runDemo();

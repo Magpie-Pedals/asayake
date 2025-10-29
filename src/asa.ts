@@ -54,6 +54,7 @@ type AsaConfig = {
   pathPrefix: string;
   playerElement: HTMLElement;
   playlistListElement?: HTMLElement;
+  log?: boolean;
 };
 
 // Main Asa player class
@@ -90,6 +91,9 @@ class Asa {
       albumImage: null,
       tracks: [],
     };
+    if (!this.config.log) {
+      console.log = () => { };
+    }
     console.log("Initializing Asa Player");
     console.log(JSON.stringify(this.config));
   }
@@ -778,6 +782,21 @@ class Asa {
       listElement.appendChild(coverElement);
 
       this.el.playlistTarget.appendChild(listElement);
+    }
+  }
+  // Debug function to log all class names in the player element
+  public printClassNames(): void {
+    if (!this.el.asa) this.error("Asa player element not initialized");
+    const elements = this.el.asa.querySelectorAll('*');
+    const classSet = new Set<string>();
+    elements.forEach(el => {
+      el.classList.forEach(cls => classSet.add(cls));
+    });
+    // Also include the root element's classes
+    this.el.asa.classList.forEach(cls => classSet.add(cls));
+    console.log("Asa Player Class Names:");
+    for (const cls of classSet) {
+      console.log(cls);
     }
   }
   // Load and play a playlist
