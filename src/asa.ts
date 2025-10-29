@@ -196,8 +196,8 @@ class Asa {
     this.el.audioPlayer.load();
     if (this.el.albumImage) {
       if (!track.albumImageUri) {
-        this.el.albumImage.style.backgroundImage = 'url("placeholder.png")';
-        this.vis!.img!.src = 'placeholder.png';
+        this.el.albumImage.style.backgroundImage = 'url("asaimg/placeholder.png")';
+        this.vis!.img!.src = 'asaimg/placeholder.png';
       }
       // Check if the image exists by making a HEAD request
       else {
@@ -209,13 +209,13 @@ class Asa {
               this.vis!.img!.src = realPath;
             }
             else {
-              this.el.albumImage!.style.backgroundImage = 'url("placeholder.png")';
-              this.vis!.img!.src = 'placeholder.png';
+              this.el.albumImage!.style.backgroundImage = 'url("asaimg/placeholder.png")';
+              this.vis!.img!.src = 'asaimg/placeholder.png';
             }
           })
           .catch(() => {
-            this.el.albumImage!.style.backgroundImage = 'url("placeholder.png")';
-            this.vis!.img!.src = 'placeholder.png';
+            this.el.albumImage!.style.backgroundImage = 'url("asaimg/placeholder.png")';
+            this.vis!.img!.src = 'asaimg/placeholder.png';
           });
       }
     }
