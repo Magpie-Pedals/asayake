@@ -521,11 +521,25 @@ class Asa {
     if (!this.el.albumImage || !this.el.audioPlayer) this.error("Album image canvas or audio player not initialized");
     console.log("Setting up visualization context");
     const ctx = this.el.albumImage.getContext('webgl');
-    if (this.vis && this.vis.audioCtx) {
-      this.vis.audioCtx.close();
+
+    let audioCtx: AudioContext;
+    let source: MediaElementAudioSourceNode;
+
+    // Reuse existing audio context and source node if available
+    if (this.vis && this.vis.audioCtx && this.vis.mediaSourceNode) {
+      audioCtx = this.vis.audioCtx;
+      source = this.vis.mediaSourceNode;
+      // Disconnect existing connections to reconfigure
+      source.disconnect();
+    } else {
+      // Close old context if it exists
+      if (this.vis && this.vis.audioCtx) {
+        this.vis.audioCtx.close();
+      }
+      audioCtx = new (AudioContext)();
+      source = audioCtx.createMediaElementSource(this.el.audioPlayer);
     }
-    const audioCtx = new (AudioContext)();
-    const source = audioCtx.createMediaElementSource(this.el.audioPlayer);
+
     const splitter = audioCtx.createChannelSplitter(2);
     const analyserL = audioCtx.createAnalyser();
     const analyserR = audioCtx.createAnalyser();
@@ -577,6 +591,11 @@ class Asa {
   // Called when loading a playlist
   private initPlayer(playlist: AsaPlaylistInternal): void {
     this.el.playerTarget.innerHTML = ''; // Clear existing content
+    // Clear vis context since we're creating a new audio element
+    if (this.vis && this.vis.audioCtx) {
+      this.vis.audioCtx.close();
+      this.vis = null;
+    }
     this.el.asa = document.createElement('div');
     this.el.asa.className = 'asa-player';
     const playlistElement = document.createElement('div');
@@ -712,7 +731,12 @@ class Asa {
       const listElement = document.createElement('div');
       listElement.className = 'asa-playlist-list-item';
       listElement.onclick = async () => {
+        // We need to preserve the current vis mode
+        // It is reset by yeet
+        const visMode = this.vis?.mode || 0;
         await this.yeet(playlistId);
+        this.vis!.mode = visMode;
+        this.updateVisMode();
         this.play();
       };
 
