@@ -1,35 +1,121 @@
 :root {
   --asa-c1: #222222;
-  --asa-c2: #4f4f4f;
-  --asa-c3: #666666;
-  --asa-c3b: #777777;
+  --asa-c2: #3f3f3f;
+  --asa-c3: #555555;
+  --asa-c3b: #666666;
   --asa-c4: #feeefe;
   --asa-c5: #ffeeff;
 
-  --asa-sh: 0.75rem;
+  --asa-sh: 1%;
   --asa-sr: 5rem;
+
+  --asa-tran: all 0.3s ease;
+}
+html, body {
+  height: 99%;
 }
 body {
   background: var(--asa-c1);
   color: var(--asa-c4);
-}
-#asa-element {
-  width: 360px;
-  border: 1px solid #444444;
   font-family: Arial, sans-serif;
-  margin: 20px;
-  padding: 10px;
+  display: flex;
 }
+
+#main-wrap {
+  display: flex;
+  margin: 0 auto;
+  height: 820px;
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 0.2rem solid var(--asa-c3);
+}
+
+#asa-player-container {
+  width: 420px;
+  max-width: 420px;
+  height: 800px;
+  max-height: 800px;
+}
+
+#asa-playlist-list-container {
+  width: 320px;
+  max-width: 320px;
+  height: 800px;
+  max-height: 800px;
+  overflow-y: auto;
+}
+
+/* 
+* Playlist List Styles 
+*/
+
+.asa-playlist-list-item {
+  background-image: none;
+  background-color: var(--asa-c2);
+  margin: 0.2rem 0;
+  max-width: 300px;
+  height: 5rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  transition: var(--asa-tran);
+  cursor: pointer;
+}
+.asa-playlist-list-item:hover {
+  background-color: var(--asa-c3);
+}
+.asa-playlist-list-item-info {
+  display: inline-block;
+  padding: 0.5rem;
+  font-weight: bold;
+  color: var(--asa-c4);
+  width: calc(67% - 1rem);
+  vertical-align: top;
+}
+.asa-playlist-list-item-title {
+  font-size: 1rem;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.asa-playlist-list-item-artist {
+  font-size: 0.7rem;
+  opacity: 0.9;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.asa-playlist-list-item-date {
+  font-size: 0.6rem;
+  opacity: 0.8;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.asa-playlist-list-item-cover {
+  background-color: var(--asa-c3);
+  display: inline-block;
+  background-size: cover;
+  background-position: center;
+  width: 33%;
+  height: 100%;
+}
+
+
+/* 
+* Player Styles 
+*/
 
 .asa-player {
   background: var(--asa-c1);
   user-select: none;
+  height: 100%;
 }
 
 .asa-playlist {
   margin-bottom: var(--asa-sh);
   border-radius: 0.5rem;
-  max-height: 15rem;
+  max-height: 25%;
+  min-height: 25%;
   overflow: scroll;
 }
 .asa-track {
@@ -57,6 +143,12 @@ body {
   font-weight: bold;
 }
 
+.asa-controls {
+  height: 8%;
+}
+.asa-controls-btn-wrap {
+  height: 75%;
+}
 .asa-btn {
   background-color: var(--asa-c2);
   border: none;
@@ -64,7 +156,7 @@ body {
   padding: 0.5rem 1rem;
   cursor: pointer;
   width: calc(100% / 5);
-  height: 2.5rem;
+  height: 100%;
   border-bottom: 0.2rem solid var(--asa-c3);
   font-weight: bold;
 }
@@ -110,10 +202,12 @@ body {
 
 .asa-now-playing {
   background: var(--asa-c2);
-  padding: 1rem;
+  padding: 0.5rem;
   border-bottom: 0.2rem solid var(--asa-c3);
   border-radius: 1rem;
   margin-bottom: var(--asa-sh);
+  height: 7%;
+  max-height: 7%;
 }
 .asa-now-playing-title {
   font-style: italic;
@@ -135,6 +229,7 @@ body {
   background-position: center;
   background-color: var(--asa-c2);
   margin-bottom: var(--asa-sh);
+  cursor: pointer;
 }
 
 /* Highlights on play */
@@ -159,9 +254,6 @@ body {
   cursor: pointer;
   overflow: hidden;
 }
-.asa-scrubber:hover {
-  background: var(--asa-c3);
-}
 .asa-scrubber-fill {
   background: var(--asa-c4);
   width: 1%;
@@ -179,9 +271,6 @@ body {
   border-radius: 0.25rem;
   overflow: hidden;
 }
-.asa-volume-control:hover {
-  background: var(--asa-c3);
-}
 .asa-volume-fill {
   background: var(--asa-c4);
   width: 50%;
@@ -194,3 +283,31 @@ body {
   text-align: right;
   color: var(--asa-c3);
 }
+
+/* 
+* Scrollbar Styles 
+*/
+::-webkit-scrollbar {
+  width: 12px;
+  background: var(--asa-c2);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--asa-c3);
+  border-radius: 8px;
+  border: 2px solid var(--asa-c2);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--asa-c3b);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--asa-c2);
+}
+
+/* Firefox */
+/* * { */
+/*   scrollbar-width: thin; */
+/*   scrollbar-color: var(--asa-c3) var(--asa-c2); */
+/* } */

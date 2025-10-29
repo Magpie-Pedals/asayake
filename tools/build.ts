@@ -27,10 +27,10 @@ fs.readdirSync(dirRes).forEach(file => {
 });
 
 // Copy all files from dist to final directory
-console.log('Copying built files to ' + dirOut);
+console.log('Copying dist files to ' + path.join(dirOut, 'asa'));
 fs.readdirSync('dist').forEach(file => {
   const srcPath = path.join('dist', file);
-  const destPath = path.join(dirOut, file);
+  const destPath = path.join(dirOut, 'asa', file);
   fs.mkdirSync(path.dirname(destPath), { recursive: true });
   const stat = fs.statSync(srcPath);
   if (stat.isFile()) {

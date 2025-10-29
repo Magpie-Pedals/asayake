@@ -1,51 +1,16 @@
-<button id="playlist1-btn">Load Playlist 1</button>
-<br>
-<button id="playlist2-btn">Load Playlist 2</button>
-<br>
-<div id="asa-element"></div>
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Asa Player Demo</title>
+</head>
+<body>
+<div id="main-wrap">
+  <div id="asa-playlist-list-container"></div><div id="asa-player-container"></div>
+</div>
 <script src="asa.js"></script>
-<script>
-//
-// Demo usage
-//
-
-// Add track keys here to include in the playlist
-const playlist1 = [
-  '10007019',
-  '13835280',
-  '14389788',
-  '16026300',
-  '19429127',
-  '27777941',
-  '29802531',
-  '32180363',
-  '33136646',
-  '36471890',
-  '36803325',
-  '38513529',
-  '41254965',
-  '44107866',
-];
-const playlist2 = [
-  '10007019',
-  '13835280',
-  '14389788',
-];
-
-const asa = new Asa('asa-element');
-asa.yeet(playlist1);
-
-// Demo buttons for switching playlists
-const p1Btn = document.getElementById('playlist1-btn');
-const p2Btn = document.getElementById('playlist2-btn');
-p1Btn?.addEventListener('click', () => {
-  console.log("Loading Playlist 1");
-  asa.yeet(playlist1);
-});
-p2Btn?.addEventListener('click', () => {
-  console.log("Loading Playlist 2");
-  asa.yeet(playlist2);
-});
-</script>
+<script src="example.js"></script>
 <link rel="stylesheet" href="asa.css">
+</body>
+</html>
