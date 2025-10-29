@@ -90,6 +90,8 @@ class Asa {
       albumImage: null,
       tracks: [],
     };
+    console.log("Initializing Asa Player");
+    console.log(JSON.stringify(this.config));
   }
   // Simple error handler
   private error(msg: string): never {
@@ -119,7 +121,7 @@ class Asa {
   }
   // Create internal playlist from master list and given playlist
   // Can take many playlist formats (types)
-  private static makePlaylistInternal(master: AsaMasterList, playlist: AsaPlaylist | AsaPlaylistSimple): AsaPlaylistInternal {
+  private makePlaylistInternal(master: AsaMasterList, playlist: AsaPlaylist | AsaPlaylistSimple): void {
     const playlistInternal: AsaPlaylistInternal = [];
     for (const [key, data] of Object.entries(master)) {
       // Handle both simple array and object playlist formats
@@ -128,7 +130,10 @@ class Asa {
         playlistInternal.push(data);
       }
     }
-    return playlistInternal;
+    if (playlistInternal.length === 0) {
+      this.error("No valid tracks found in the provided playlist");
+    }
+    this.playlist = playlistInternal;
   }
   // Play the current track
   private play(): void {
@@ -162,7 +167,8 @@ class Asa {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-    } else {
+    }
+    else {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
@@ -180,6 +186,7 @@ class Asa {
       };
     }
     // Update audio source and metadata display
+    console.log(this.playlist);
     const track = this.playlist[trackIndex];
     if (!track) this.error(`Track at index ${trackIndex} not found in playlist`);
     if (!this.el.audioPlayer) this.error("Audio player element not initialized");
@@ -194,11 +201,12 @@ class Asa {
       }
       // Check if the image exists by making a HEAD request
       else {
-        fetch(track.albumImageUri, { method: 'HEAD' })
+        const realPath = `${this.config.pathPrefix}/${track.albumImageUri}`;
+        fetch(realPath, { method: 'HEAD' })
           .then((response) => {
             if (response.ok) {
-              this.el.albumImage!.style.backgroundImage = `url("${this.config.pathPrefix}/${track.albumImageUri}")`;
-              this.vis!.img!.src = `${this.config.pathPrefix}/${track.albumImageUri}`;
+              this.el.albumImage!.style.backgroundImage = `url("${realPath}")`;
+              this.vis!.img!.src = realPath;
             }
             else {
               this.el.albumImage!.style.backgroundImage = 'url("placeholder.png")';
@@ -766,7 +774,7 @@ class Asa {
 
       const coverElement = document.createElement('div');
       coverElement.className = 'asa-playlist-list-item-cover';
-      coverElement.style.backgroundImage = `url("${playlistData.albumImageUri || ''}")`;
+      coverElement.style.backgroundImage = `url("${this.config.pathPrefix}/${playlistData.albumImageUri || ''}")`;
       listElement.appendChild(coverElement);
 
       this.el.playlistTarget.appendChild(listElement);
@@ -788,17 +796,22 @@ class Asa {
       this.el.tracks = [];
     }
     if (typeof playlist === 'object') {
-      this.playlist = Asa.makePlaylistInternal(this.meta.master, playlist);
+      console.log("Loading playlist from object (AsaPlaylist or AsaPlaylistSimple)");
+      this.makePlaylistInternal(this.meta.master, playlist);
     }
     else { // it's an ID
       if (!this.meta.playlists) {
-        throw new Error("Playlists metadata not initialized");
+        this.error("Playlists metadata not initialized");
       }
       const playlistRaw = this.meta.playlists[playlist];
       if (!playlistRaw) {
-        throw new Error(`Playlist with ID ${playlist} not found`);
+        this.error(`Playlist with ID ${playlist} not found`);
       }
-      this.playlist = Asa.makePlaylistInternal(this.meta.master, playlistRaw);
+      console.log("Loading a raw playlist by ID");
+      this.makePlaylistInternal(this.meta.master, playlistRaw);
+    }
+    if (this.playlist.length === 0) {
+      this.error("Playlist is empty");
     }
     this.initPlaylistList();
     this.initPlayer(this.playlist);
