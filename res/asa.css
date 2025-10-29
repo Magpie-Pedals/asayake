@@ -20,6 +20,16 @@ body {
   font-family: Arial, sans-serif;
   display: flex;
 }
+
+#main-wrap {
+  display: flex;
+  margin: 0 auto;
+  height: 820px;
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 0.2rem solid var(--asa-c3);
+}
+
 #asa-player-container {
   width: 420px;
   max-width: 420px;
