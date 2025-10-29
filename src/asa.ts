@@ -150,89 +150,6 @@ class Asa {
     this.el.audioPlayer?.pause();
     this.el.asa?.classList.remove('asa-playing');
   }
-  // Update album image texture
-  // Image size might not be power of 2, so set parameters accordingly
-  private updateShaderTexture(): void {
-    if (!this.vis) this.error("Visualization context not initialized");
-    if (!this.vis.img) this.error("Album image not initialized");
-    const gl = this.vis.ctx;
-    if (!gl) this.error("WebGL context not initialized");
-    console.log("Album image loaded, updating texture");
-    // Create or update texture with correct parameters for NPOT images
-    const isPowerOf2 = (value: number) => (value & (value - 1)) === 0;
-    const img = this.vis.img;
-    this.vis.albumImageTexture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, this.vis.albumImageTexture);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-
-    if (isPowerOf2(img.width) && isPowerOf2(img.height)) {
-      gl.generateMipmap(gl.TEXTURE_2D);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-    }
-    else {
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    }
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-  }
-  // Update track information and audio source
-  // Called when changing tracks
-  private updateTrack(trackIndex: number): void {
-    if (!this.vis) this.error("Visualization context not initialized");
-    if (this.vis.img) {
-      console.log("Setting album image source");
-      this.vis.img.onload = () => {
-        this.updateShaderTexture();
-      };
-    }
-    // Update audio source and metadata display
-    console.log(this.playlist);
-    const track = this.playlist[trackIndex];
-    if (!track) this.error(`Track at index ${trackIndex} not found in playlist`);
-    if (!this.el.audioPlayer) this.error("Audio player element not initialized");
-
-    this.el.audioPlayer.src = `${this.config.pathPrefix}/${track.audioUri}`;
-    this.el.audioPlayer.currentTime = 0;
-    this.el.audioPlayer.load();
-    if (this.el.albumImage) {
-      if (!track.albumImageUri) {
-        this.el.albumImage.style.backgroundImage = 'url("asaimg/placeholder.png")';
-        this.vis!.img!.src = 'asaimg/placeholder.png';
-      }
-      // Check if the image exists by making a HEAD request
-      else {
-        const realPath = `${this.config.pathPrefix}/${track.albumImageUri}`;
-        fetch(realPath, { method: 'HEAD' })
-          .then((response) => {
-            if (response.ok) {
-              this.el.albumImage!.style.backgroundImage = `url("${realPath}")`;
-              this.vis!.img!.src = realPath;
-            }
-            else {
-              this.el.albumImage!.style.backgroundImage = 'url("asaimg/placeholder.png")';
-              this.vis!.img!.src = 'asaimg/placeholder.png';
-            }
-          })
-          .catch(() => {
-            this.el.albumImage!.style.backgroundImage = 'url("asaimg/placeholder.png")';
-            this.vis!.img!.src = 'asaimg/placeholder.png';
-          });
-      }
-    }
-    this.el.nowPlayingTitle!.innerText = track.title;
-    this.el.nowPlayingArtist!.innerText = track.artist;
-    this.el.nowPlayingAlbum!.innerText = track.albumTitle;
-    for (const [index, trackEl] of (this.el.tracks ?? []).entries()) {
-      trackEl.classList.remove('asa-track-playing');
-      if (index === trackIndex) {
-        trackEl.classList.add('asa-track-playing');
-      }
-    }
-  }
   // Navigate to next track
   private nextTrack(currentIndex: number): void {
     this.trackIndex = (currentIndex + 1) % this.playlist.length;
@@ -483,6 +400,89 @@ class Asa {
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.disableVertexAttribArray(locs.aPosition);
     gl.useProgram(null);
+  }
+  // Update track information and audio source
+  // Called when changing tracks
+  private updateTrack(trackIndex: number): void {
+    if (!this.vis) this.error("Visualization context not initialized");
+    if (this.vis.img) {
+      console.log("Setting album image source");
+      this.vis.img.onload = () => {
+        this.updateShaderTexture();
+      };
+    }
+    // Update audio source and metadata display
+    console.log(this.playlist);
+    const track = this.playlist[trackIndex];
+    if (!track) this.error(`Track at index ${trackIndex} not found in playlist`);
+    if (!this.el.audioPlayer) this.error("Audio player element not initialized");
+
+    this.el.audioPlayer.src = `${this.config.pathPrefix}/${track.audioUri}`;
+    this.el.audioPlayer.currentTime = 0;
+    this.el.audioPlayer.load();
+    if (this.el.albumImage) {
+      if (!track.albumImageUri) {
+        this.el.albumImage.style.backgroundImage = 'url("asaimg/placeholder.png")';
+        this.vis!.img!.src = 'asaimg/placeholder.png';
+      }
+      // Check if the image exists by making a HEAD request
+      else {
+        const realPath = `${this.config.pathPrefix}/${track.albumImageUri}`;
+        fetch(realPath, { method: 'HEAD' })
+          .then((response) => {
+            if (response.ok) {
+              this.el.albumImage!.style.backgroundImage = `url("${realPath}")`;
+              this.vis!.img!.src = realPath;
+            }
+            else {
+              this.el.albumImage!.style.backgroundImage = 'url("asaimg/placeholder.png")';
+              this.vis!.img!.src = 'asaimg/placeholder.png';
+            }
+          })
+          .catch(() => {
+            this.el.albumImage!.style.backgroundImage = 'url("asaimg/placeholder.png")';
+            this.vis!.img!.src = 'asaimg/placeholder.png';
+          });
+      }
+    }
+    this.el.nowPlayingTitle!.innerText = track.title;
+    this.el.nowPlayingArtist!.innerText = track.artist;
+    this.el.nowPlayingAlbum!.innerText = track.albumTitle;
+    for (const [index, trackEl] of (this.el.tracks ?? []).entries()) {
+      trackEl.classList.remove('asa-track-playing');
+      if (index === trackIndex) {
+        trackEl.classList.add('asa-track-playing');
+      }
+    }
+  }
+  // Update album image texture
+  // Image size might not be power of 2, so set parameters accordingly
+  private updateShaderTexture(): void {
+    if (!this.vis) this.error("Visualization context not initialized");
+    if (!this.vis.img) this.error("Album image not initialized");
+    const gl = this.vis.ctx;
+    if (!gl) this.error("WebGL context not initialized");
+    console.log("Album image loaded, updating texture");
+    // Create or update texture with correct parameters for NPOT images
+    const isPowerOf2 = (value: number) => (value & (value - 1)) === 0;
+    const img = this.vis.img;
+    this.vis.albumImageTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.vis.albumImageTexture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+
+    if (isPowerOf2(img.width) && isPowerOf2(img.height)) {
+      gl.generateMipmap(gl.TEXTURE_2D);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+    }
+    else {
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    }
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
   }
   // Update visualization mode
   // Compiles and sets the appropriate shader program
