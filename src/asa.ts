@@ -219,7 +219,7 @@ class Asa {
       const seconds = (time % 60).toString().padStart(2, '0');
       return `${minutes}:${seconds}`;
     };
-    timestamp.innerText = `${formatTime(current)} / ${formatTime(duration)}`;
+    timestamp.innerText = `${formatTime(current)} / ${formatTime(duration || 0)}`;
   }
   // Scrubber Events
   private attachScrubberEvents(scrubber: HTMLElement): void {
