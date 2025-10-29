@@ -8,11 +8,13 @@ import type {
   AsaPlaylistList,
 } from './types.ts';
 
+// Shaders consist of vertex and fragment shader source code
 export type AsaShader = {
   vsSource: string;
   fsSource: string;
 };
 
+// HTML elements used in the Asa player
 type AsaElements = {
   playerTarget: HTMLElement;
   playlistTarget: HTMLElement | null;
@@ -27,6 +29,7 @@ type AsaElements = {
   tracks: HTMLElement[] | null;
 };
 
+// Visualization context and state
 type AsaVis = {
   ctx: WebGLRenderingContext | null;
   mediaSourceNode: MediaElementAudioSourceNode | null;
@@ -46,12 +49,14 @@ type AsaVis = {
   shader: AsaShader;
 };
 
+// Configuration for Asa player
 type AsaConfig = {
   pathPrefix: string;
   playerElement: HTMLElement;
   playlistListElement?: HTMLElement;
 };
 
+// Main Asa player class
 class Asa {
   private config: AsaConfig;
   private el: AsaElements;
@@ -63,6 +68,7 @@ class Asa {
   private trackIndex: number = 0;
   private isShuffle: boolean = false;
   private vis: AsaVis | null = null;
+  // Visualization modes configuration
   private modeMap = [
     { fftSize: 32, shader: shaders.nothing },
     { fftSize: 2048, shader: shaders.spectrumAnalyzer },
@@ -85,9 +91,12 @@ class Asa {
       tracks: [],
     };
   }
+  // Simple error handler
   private error(msg: string): never {
     throw new Error(`Asa Player Error: ${msg}`);
   }
+  // Fetch metadata JSON files
+  // Writes them to state
   private async fetchMetadata(): Promise<void> {
     try {
       const response = await fetch('metadata/metadata.json');
@@ -108,6 +117,8 @@ class Asa {
       console.error("Error fetching playlists:", error);
     }
   }
+  // Create internal playlist from master list and given playlist
+  // Can take many playlist formats (types)
   private static makePlaylistInternal(master: AsaMasterList, playlist: AsaPlaylist | AsaPlaylistSimple): AsaPlaylistInternal {
     const playlistInternal: AsaPlaylistInternal = [];
     for (const [key, data] of Object.entries(master)) {
@@ -119,10 +130,12 @@ class Asa {
     }
     return playlistInternal;
   }
+  // Play the current track
   private play(): void {
     this.el.audioPlayer?.play();
     this.el.asa?.classList.add('asa-playing');
   }
+  // Pause the current track
   private pause(): void {
     this.el.audioPlayer?.pause();
     this.el.asa?.classList.remove('asa-playing');
@@ -145,7 +158,6 @@ class Asa {
 
     if (isPowerOf2(img.width) && isPowerOf2(img.height)) {
       gl.generateMipmap(gl.TEXTURE_2D);
-      // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
@@ -156,6 +168,8 @@ class Asa {
     }
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
   }
+  // Update track information and audio source
+  // Called when changing tracks
   private updateTrack(trackIndex: number): void {
     if (!this.vis) this.error("Visualization context not initialized");
     if (this.vis.img) {
@@ -206,16 +220,19 @@ class Asa {
       }
     }
   }
+  // Navigate to next track
   private nextTrack(currentIndex: number): void {
     this.trackIndex = (currentIndex + 1) % this.playlist.length;
     this.updateTrack(this.trackIndex);
     this.play();
   }
+  // Navigate to previous track
   private prevTrack(currentIndex: number): void {
     this.trackIndex = (currentIndex - 1 + this.playlist.length) % this.playlist.length;
     this.updateTrack(this.trackIndex);
     this.play();
   }
+  // Play/Pause button click handler
   private onPPClick(): void {
     if (!this.el.audioPlayer) this.error("Audio player element not initialized");
     if (this.el.audioPlayer.paused) {
@@ -225,6 +242,7 @@ class Asa {
       this.pause();
     }
   }
+  // Album image click handler to change visualization mode
   private onAlbumImageClick(): void {
     if (!this.vis) this.error("Visualization context not initialized");
     if (this.el.audioPlayer && this.el.audioPlayer.paused) {
@@ -235,14 +253,18 @@ class Asa {
     console.log(`Visualization mode changed to ${this.vis.mode}`);
     this.updateVisMode();
   }
+  // Shuffle button click handler
   private onShuffleClick(): void {
     this.isShuffle = !this.isShuffle;
   }
+  // Playlist track click handler
+  // Updates track and plays it
   private onPlaylistClick(trackIndex: number): void {
     this.updateTrack(trackIndex);
     this.play();
     this.trackIndex = trackIndex;
   }
+  // Audio time update handler
   // NOTE:
   // Listening for `ended` has some delay so use this instead
   private onTimeUpdate(timestamp: HTMLElement): void {
@@ -294,45 +316,46 @@ class Asa {
     });
   }
   // Volume events
-  private handleVolume(e: PointerEvent, volumeControl: HTMLElement): void {
-    if (!this.el.audioPlayer) this.error("Audio player element not initialized");
-    const rect = volumeControl.getBoundingClientRect();
-    const pointerX = e.clientX - rect.left;
-    const width = rect.width;
-    const percent = Math.max(0, Math.min(1, pointerX / width));
-    // Logarithmic scaling: perceptual volume
-    const minDb = -50;
-    const maxDb = 0;
-    let linear: number;
-    if (percent === 0) {
-      linear = 0;
-    }
-    else if (percent === 1) {
-      linear = 1;
-    }
-    else {
-      const db = minDb + (maxDb - minDb) * percent;
-      linear = Math.pow(10, db / 20);
-    }
-    this.el.audioPlayer.volume = linear;
-    if (this.el.volumeFill) {
-      this.el.volumeFill.style.width = `${percent * 100}%`;
-    }
-  }
   private attachVolumeEvents(volumeControl: HTMLElement): void {
+    const handleVolume = (e: PointerEvent, volumeControl: HTMLElement): void => {
+      if (!this.el.audioPlayer) this.error("Audio player element not initialized");
+      const rect = volumeControl.getBoundingClientRect();
+      const pointerX = e.clientX - rect.left;
+      const width = rect.width;
+      const percent = Math.max(0, Math.min(1, pointerX / width));
+      // Logarithmic scaling: perceptual volume
+      const minDb = -50;
+      const maxDb = 0;
+      let linear: number;
+      if (percent === 0) {
+        linear = 0;
+      }
+      else if (percent === 1) {
+        linear = 1;
+      }
+      else {
+        const db = minDb + (maxDb - minDb) * percent;
+        linear = Math.pow(10, db / 20);
+      }
+      this.el.audioPlayer.volume = linear;
+      if (this.el.volumeFill) {
+        this.el.volumeFill.style.width = `${percent * 100}%`;
+      }
+    }
     const onPointerMove = (e: PointerEvent) => {
-      this.handleVolume(e, volumeControl);
+      handleVolume(e, volumeControl);
     };
     const onPointerUp = () => {
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
     };
     volumeControl.addEventListener('pointerdown', (e: PointerEvent) => {
-      this.handleVolume(e, volumeControl);
+      handleVolume(e, volumeControl);
       window.addEventListener('pointermove', onPointerMove);
       window.addEventListener('pointerup', onPointerUp);
     });
   }
+  // Compile a shader from source
   private compileShader(type: number, src: string): WebGLShader | null {
     if (!this.vis) this.error("Visualization context not initialized");
     if (!this.vis.ctx) this.error("WebGL context not initialized");
@@ -342,6 +365,8 @@ class Asa {
     gl.compileShader(shader);
     return shader;
   }
+  // Main draw loop
+  // Called via requestAnimationFrame
   private draw(): void {
     if (!this.vis) this.error("Visualization context not initialized");
     // Update audio data
@@ -446,6 +471,8 @@ class Asa {
     gl.disableVertexAttribArray(locs.aPosition);
     gl.useProgram(null);
   }
+  // Update visualization mode
+  // Compiles and sets the appropriate shader program
   private updateVisMode(): void {
     if (!this.vis) this.error("Visualization context not initialized");
     const gl = this.vis.ctx;
@@ -530,7 +557,6 @@ class Asa {
       img: this.vis?.img ?? new Image(), // Will be set later
       shader: shaders.shader0!,
     };
-
     this.el.audioPlayer.onplay = () => {
       audioCtx.resume();
       this.draw();
@@ -547,6 +573,8 @@ class Asa {
       ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_WRAP_T, ctx.CLAMP_TO_EDGE);
     }
   }
+  // Initialize the player UI
+  // Called when loading a playlist
   private initPlayer(playlist: AsaPlaylistInternal): void {
     this.el.playerTarget.innerHTML = ''; // Clear existing content
     this.el.asa = document.createElement('div');
@@ -675,6 +703,7 @@ class Asa {
     // Setup audio event listeners
     this.el.audioPlayer.addEventListener('timeupdate', this.onTimeUpdate.bind(this, timestamp));
   }
+  // Initialize the playlist list UI
   private initPlaylistList(): void {
     if (!this.el.playlistTarget) this.error("Playlist list element not initialized");
     if (!this.meta.playlists) this.error("Playlists metadata not initialized");
@@ -715,7 +744,9 @@ class Asa {
       this.el.playlistTarget.appendChild(listElement);
     }
   }
-  async yeet(playlist: AsaPlaylist | AsaPlaylistSimple | AsaPlaylistId): Promise<void> {
+  // Load and play a playlist
+  // Accepts various playlist formats or IDs
+  public async yeet(playlist: AsaPlaylist | AsaPlaylistSimple | AsaPlaylistId): Promise<void> {
     // We only want to grab the  master list once
     if (!this.meta.master) {
       await this.fetchMetadata();
@@ -751,10 +782,10 @@ class Asa {
   }
 }
 
+// Declare a global variable for Asa
 declare global {
   interface Window {
     Asa: typeof Asa;
   }
 }
-
 window.Asa = Asa;
