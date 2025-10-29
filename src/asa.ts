@@ -29,6 +29,7 @@ type AsaElements = {
 
 type AsaVis = {
   ctx: WebGLRenderingContext | null;
+  mediaSourceNode: MediaElementAudioSourceNode | null;
   drawProgram: WebGLProgram | null;
   drawLocs: any;
   drawBuf: WebGLBuffer | null;
@@ -84,6 +85,9 @@ class Asa {
       tracks: [],
     };
   }
+  private error(msg: string): never {
+    throw new Error(`Asa Player Error: ${msg}`);
+  }
   private async fetchMetadata(): Promise<void> {
     try {
       const response = await fetch('metadata/metadata.json');
@@ -126,10 +130,10 @@ class Asa {
   // Update album image texture
   // Image size might not be power of 2, so set parameters accordingly
   private updateShaderTexture(): void {
-    if (!this.vis) return;
-    if (!this.vis.img) return;
+    if (!this.vis) this.error("Visualization context not initialized");
+    if (!this.vis.img) this.error("Album image not initialized");
     const gl = this.vis.ctx;
-    if (!gl) return;
+    if (!gl) this.error("WebGL context not initialized");
     console.log("Album image loaded, updating texture");
     // Create or update texture with correct parameters for NPOT images
     const isPowerOf2 = (value: number) => (value & (value - 1)) === 0;
@@ -153,7 +157,7 @@ class Asa {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
   }
   private updateTrack(trackIndex: number): void {
-    if (!this.vis) return;
+    if (!this.vis) this.error("Visualization context not initialized");
     if (this.vis.img) {
       console.log("Setting album image source");
       this.vis.img.onload = () => {
@@ -162,14 +166,9 @@ class Asa {
     }
     // Update audio source and metadata display
     const track = this.playlist[trackIndex];
-    if (!track) {
-      console.error(`Track at index ${trackIndex} not found in playlist`);
-      return;
-    }
-    if (!this.el.audioPlayer) {
-      console.error("Audio element not initialized");
-      return;
-    }
+    if (!track) this.error(`Track at index ${trackIndex} not found in playlist`);
+    if (!this.el.audioPlayer) this.error("Audio player element not initialized");
+
     this.el.audioPlayer.src = `${this.config.pathPrefix}/${track.audioUri}`;
     this.el.audioPlayer.currentTime = 0;
     this.el.audioPlayer.load();
@@ -218,7 +217,7 @@ class Asa {
     this.play();
   }
   private onPPClick(): void {
-    if (!this.el.audioPlayer) return;
+    if (!this.el.audioPlayer) this.error("Audio player element not initialized");
     if (this.el.audioPlayer.paused) {
       this.play();
     }
@@ -227,7 +226,7 @@ class Asa {
     }
   }
   private onAlbumImageClick(): void {
-    if (!this.vis) return;
+    if (!this.vis) this.error("Visualization context not initialized");
     if (this.el.audioPlayer && this.el.audioPlayer.paused) {
       this.play();
     }
@@ -247,7 +246,7 @@ class Asa {
   // NOTE:
   // Listening for `ended` has some delay so use this instead
   private onTimeUpdate(timestamp: HTMLElement): void {
-    if (!this.el.audioPlayer) return;
+    if (!this.el.audioPlayer) this.error("Audio player element not initialized");
     if (this.el.audioPlayer.currentTime >= this.el.audioPlayer.duration) {
       this.el.audioPlayer.pause();
       this.el.audioPlayer.currentTime = this.el.audioPlayer.duration;
@@ -273,7 +272,7 @@ class Asa {
   // Scrubber Events
   private attachScrubberEvents(scrubber: HTMLElement): void {
     const handleScrub = (e: PointerEvent, scrubber: HTMLElement): void => {
-      if (!this.el.audioPlayer) return;
+      if (!this.el.audioPlayer) this.error("Audio player element not initialized");
       const rect = scrubber.getBoundingClientRect();
       const pointerX = e.clientX - rect.left;
       const width = rect.width;
@@ -296,7 +295,7 @@ class Asa {
   }
   // Volume events
   private handleVolume(e: PointerEvent, volumeControl: HTMLElement): void {
-    if (!this.el.audioPlayer) return;
+    if (!this.el.audioPlayer) this.error("Audio player element not initialized");
     const rect = volumeControl.getBoundingClientRect();
     const pointerX = e.clientX - rect.left;
     const width = rect.width;
@@ -335,8 +334,8 @@ class Asa {
     });
   }
   private compileShader(type: number, src: string): WebGLShader | null {
-    if (!this.vis) return null;
-    if (!this.vis.ctx) return null;
+    if (!this.vis) this.error("Visualization context not initialized");
+    if (!this.vis.ctx) this.error("WebGL context not initialized");
     const gl = this.vis.ctx;
     const shader = gl.createShader(type)!;
     gl.shaderSource(shader, src);
@@ -344,7 +343,7 @@ class Asa {
     return shader;
   }
   private draw(): void {
-    if (!this.vis) return;
+    if (!this.vis) this.error("Visualization context not initialized");
     // Update audio data
     requestAnimationFrame(this.draw.bind(this));
     let dataArrayL: Uint8Array<ArrayBuffer> = new Uint8Array(this.vis.bufferLength);
@@ -384,8 +383,8 @@ class Asa {
 
     // Gl draw routine
     const gl = this.vis.ctx;
-    if (!gl) return;
-    if (!this.el.albumImage) return;
+    if (!gl) this.error("WebGL context not initialized");
+    if (!this.el.albumImage) this.error("Album image canvas not initialized");
     const bufferLength = this.vis.bufferLength;
     const locs = this.vis.drawLocs;
     gl.useProgram(this.vis.drawProgram);
@@ -448,9 +447,9 @@ class Asa {
     gl.useProgram(null);
   }
   private updateVisMode(): void {
-    if (!this.vis) return;
+    if (!this.vis) this.error("Visualization context not initialized");
     const gl = this.vis.ctx;
-    if (!gl) return;
+    if (!gl) this.error("WebGL context not initialized");
     // Clear the existing program
     if (this.vis.drawProgram) {
       gl.deleteProgram(this.vis.drawProgram);
@@ -460,7 +459,7 @@ class Asa {
     }
     const cfg = this.modeMap[this.vis.mode] ?? this.modeMap[0];
     if (cfg!.fftSize) this.setupVisContext(cfg!.fftSize);
-    if (!cfg!.shader) return;
+    if (!cfg!.shader) this.error("Shader configuration missing");
     this.vis.shader = cfg!.shader;
     const { vsSource, fsSource } = this.vis.shader;
     // Replace aIndex with aPosition in shader sources if needed
@@ -468,7 +467,7 @@ class Asa {
     this.vis.shader.vsSource = patchedVsSource;
     const vs = this.compileShader(gl.VERTEX_SHADER, this.vis.shader.vsSource);
     const fs = this.compileShader(gl.FRAGMENT_SHADER, fsSource);
-    if (!vs || !fs) return;
+    if (!vs || !fs) this.error("Failed to compile shaders");
     const prog = gl.createProgram()!;
     gl.attachShader(prog, vs);
     gl.attachShader(prog, fs);
@@ -492,61 +491,60 @@ class Asa {
   // Set up WebGL and AudioContext for visualization
   // Called when initializing, changing modes, or changing fftSize
   private setupVisContext(fftSize: number = 2048): void {
+    if (!this.el.albumImage || !this.el.audioPlayer) this.error("Album image canvas or audio player not initialized");
     console.log("Setting up visualization context");
-    if (this.el.albumImage && this.el.audioPlayer) {
-      const ctx = this.el.albumImage.getContext('webgl');
-      if (this.vis && this.vis.audioCtx) {
-        this.vis.audioCtx.close();
-      }
-      const audioCtx = new (AudioContext)();
-      const source = audioCtx.createMediaElementSource(this.el.audioPlayer);
-      const splitter = audioCtx.createChannelSplitter(2);
-      const analyserL = audioCtx.createAnalyser();
-      const analyserR = audioCtx.createAnalyser();
-      source.connect(splitter);
-      analyserL.fftSize = fftSize;
-      analyserR.fftSize = fftSize;
-      splitter.connect(analyserL, 0); // Left channel
-      splitter.connect(analyserR, 1); // Right channel
-      source.connect(analyserL);
-      source.connect(analyserR);
-      source.connect(audioCtx.destination);
-      const bufferLength = analyserL.frequencyBinCount;
-      const mode = this.vis?.mode ?? 0;// 0 is none
-      this.vis = {
-        ctx: ctx,
-        drawProgram: null,
-        drawLocs: null,
-        drawBuf: null,
-        albumImageTexture: null,
-        audioCtx: audioCtx,
-        analyserL: analyserL,
-        analyserR: analyserR,
-        bufferLength: bufferLength,
-        rmsL: 0,
-        rmsR: 0,
-        rmsM: 0,
-        mode: mode,
-        img: this.vis?.img ?? new Image(), // Will be set later
-        shader: shaders.shader0!,
-      };
+    const ctx = this.el.albumImage.getContext('webgl');
+    if (this.vis && this.vis.audioCtx) {
+      this.vis.audioCtx.close();
+    }
+    const audioCtx = new (AudioContext)();
+    const source = audioCtx.createMediaElementSource(this.el.audioPlayer);
+    const splitter = audioCtx.createChannelSplitter(2);
+    const analyserL = audioCtx.createAnalyser();
+    const analyserR = audioCtx.createAnalyser();
+    source.connect(splitter);
+    analyserL.fftSize = fftSize;
+    analyserR.fftSize = fftSize;
+    splitter.connect(analyserL, 0); // Left channel
+    splitter.connect(analyserR, 1); // Right channel
+    source.connect(analyserL);
+    source.connect(analyserR);
+    source.connect(audioCtx.destination);
+    const bufferLength = analyserL.frequencyBinCount;
+    const mode = this.vis?.mode ?? 0;// 0 is none
+    this.vis = {
+      ctx: ctx,
+      mediaSourceNode: source,
+      drawProgram: null,
+      drawLocs: null,
+      drawBuf: null,
+      albumImageTexture: null,
+      audioCtx: audioCtx,
+      analyserL: analyserL,
+      analyserR: analyserR,
+      bufferLength: bufferLength,
+      rmsL: 0,
+      rmsR: 0,
+      rmsM: 0,
+      mode: mode,
+      img: this.vis?.img ?? new Image(), // Will be set later
+      shader: shaders.shader0!,
+    };
 
-      this.el.audioPlayer.onplay = () => {
-        audioCtx.resume();
-        this.draw();
-      };
-
-      // Create default 1x1 white texture to avoid null texture issues
-      if (ctx) {
-        this.vis.albumImageTexture = ctx.createTexture();
-        ctx.bindTexture(ctx.TEXTURE_2D, this.vis.albumImageTexture);
-        const defaultPixel = new Uint8Array([255, 255, 255, 255]); // White pixel
-        ctx.texImage2D(ctx.TEXTURE_2D, 0, ctx.RGBA, 1, 1, 0, ctx.RGBA, ctx.UNSIGNED_BYTE, defaultPixel);
-        ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_MIN_FILTER, ctx.NEAREST);
-        ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_MAG_FILTER, ctx.NEAREST);
-        ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_WRAP_S, ctx.CLAMP_TO_EDGE);
-        ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_WRAP_T, ctx.CLAMP_TO_EDGE);
-      }
+    this.el.audioPlayer.onplay = () => {
+      audioCtx.resume();
+      this.draw();
+    };
+    // Create default 1x1 white texture to avoid null texture issues
+    if (ctx) {
+      this.vis.albumImageTexture = ctx.createTexture();
+      ctx.bindTexture(ctx.TEXTURE_2D, this.vis.albumImageTexture);
+      const defaultPixel = new Uint8Array([255, 255, 255, 255]); // White pixel
+      ctx.texImage2D(ctx.TEXTURE_2D, 0, ctx.RGBA, 1, 1, 0, ctx.RGBA, ctx.UNSIGNED_BYTE, defaultPixel);
+      ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_MIN_FILTER, ctx.NEAREST);
+      ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_MAG_FILTER, ctx.NEAREST);
+      ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_WRAP_S, ctx.CLAMP_TO_EDGE);
+      ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_WRAP_T, ctx.CLAMP_TO_EDGE);
     }
   }
   private initPlayer(playlist: AsaPlaylistInternal): void {
@@ -678,8 +676,8 @@ class Asa {
     this.el.audioPlayer.addEventListener('timeupdate', this.onTimeUpdate.bind(this, timestamp));
   }
   private initPlaylistList(): void {
-    if (!this.el.playlistTarget) return;
-    if (!this.meta.playlists) return;
+    if (!this.el.playlistTarget) this.error("Playlist list element not initialized");
+    if (!this.meta.playlists) this.error("Playlists metadata not initialized");
     this.el.playlistTarget.innerHTML = '';
     for (const [playlistId, playlistData] of Object.entries(this.meta.playlists)) {
       const listElement = document.createElement('div');
