@@ -132,6 +132,7 @@ class Asa {
   }
   // Play the current track
   private play(): void {
+    console.log("called play")
     this.el.audioPlayer?.play();
     this.el.asa?.classList.add('asa-playing');
   }
@@ -531,7 +532,8 @@ class Asa {
       source = this.vis.mediaSourceNode;
       // Disconnect existing connections to reconfigure
       source.disconnect();
-    } else {
+    }
+    else {
       // Close old context if it exists
       if (this.vis && this.vis.audioCtx) {
         this.vis.audioCtx.close();
@@ -613,6 +615,8 @@ class Asa {
     // Append the audio player
     this.el.audioPlayer = document.createElement('audio');
     this.el.audioPlayer.controls = false;
+    this.el.audioPlayer.preload = 'auto';
+    this.el.audioPlayer.autoplay = false;
 
     // Append the currently playing display
     const nowPlayingElement = document.createElement('div');
