@@ -6,33 +6,39 @@
   --asa-c4: #feeefe;
   --asa-c5: #ffeeff;
 
-  --asa-sh: 0.75rem;
+  --asa-sh: 1%;
   --asa-sr: 5rem;
 
   --asa-tran: all 0.3s ease;
+}
+html, body {
+  height: 100%;
 }
 body {
   background: var(--asa-c1);
   color: var(--asa-c4);
   font-family: Arial, sans-serif;
+  display: flex;
 }
 #asa-player-container {
-  width: 360px;
-  border: 1px solid #444444;
-  margin: 20px;
-  padding: 10px;
-  display: inline-block;
+  width: 420px;
+  max-width: 420px;
+  height: 800px;
+  max-height: 800px;
 }
 
 #asa-playlist-list-container {
+  width: 320px;
+  max-width: 320px;
+  height: 800px;
   max-height: 800px;
   overflow-y: auto;
-  padding-right: 10px;
-  margin-bottom: var(--asa-sh);
-  display: inline-block;
 }
 
-/* Playlist List Styles */
+/* 
+* Playlist List Styles 
+*/
+
 .asa-playlist-list-item {
   background-image: none;
   background-color: var(--asa-c2);
@@ -85,18 +91,21 @@ body {
 }
 
 
-/* Player Styles */
+/* 
+* Player Styles 
+*/
 
 .asa-player {
   background: var(--asa-c1);
   user-select: none;
+  height: 100%;
 }
 
 .asa-playlist {
   margin-bottom: var(--asa-sh);
   border-radius: 0.5rem;
-  max-height: 15rem;
-  min-height: 15rem;
+  max-height: 25%;
+  min-height: 25%;
   overflow: scroll;
 }
 .asa-track {
@@ -124,6 +133,12 @@ body {
   font-weight: bold;
 }
 
+.asa-controls {
+  height: 8%;
+}
+.asa-controls-btn-wrap {
+  height: 75%;
+}
 .asa-btn {
   background-color: var(--asa-c2);
   border: none;
@@ -131,7 +146,7 @@ body {
   padding: 0.5rem 1rem;
   cursor: pointer;
   width: calc(100% / 5);
-  height: 2.5rem;
+  height: 100%;
   border-bottom: 0.2rem solid var(--asa-c3);
   font-weight: bold;
 }
@@ -177,10 +192,12 @@ body {
 
 .asa-now-playing {
   background: var(--asa-c2);
-  padding: 1rem;
+  padding: 0.5rem;
   border-bottom: 0.2rem solid var(--asa-c3);
   border-radius: 1rem;
   margin-bottom: var(--asa-sh);
+  height: 7%;
+  max-height: 7%;
 }
 .asa-now-playing-title {
   font-style: italic;

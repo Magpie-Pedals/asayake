@@ -489,7 +489,10 @@ class Asa {
     };
     this.updateShaderTexture();
   }
+  // Set up WebGL and AudioContext for visualization
+  // Called when initializing, changing modes, or changing fftSize
   private setupVisContext(fftSize: number = 2048): void {
+    console.log("Setting up visualization context");
     if (this.el.albumImage && this.el.audioPlayer) {
       const ctx = this.el.albumImage.getContext('webgl');
       if (this.vis && this.vis.audioCtx) {
