@@ -11,9 +11,12 @@
 
   --asa-tran: all 0.3s ease;
 }
-html, body {
+
+html,
+body {
   height: 99%;
 }
+
 body {
   background: var(--asa-c1);
   color: var(--asa-c4);
@@ -60,9 +63,11 @@ body {
   transition: var(--asa-tran);
   cursor: pointer;
 }
+
 .asa-playlist-list-item:hover {
   background-color: var(--asa-c3);
 }
+
 .asa-playlist-list-item-info {
   display: inline-block;
   padding: 0.5rem;
@@ -71,12 +76,14 @@ body {
   width: calc(67% - 1rem);
   vertical-align: top;
 }
+
 .asa-playlist-list-item-title {
   font-size: 1rem;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+
 .asa-playlist-list-item-artist {
   font-size: 0.7rem;
   opacity: 0.9;
@@ -84,6 +91,7 @@ body {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+
 .asa-playlist-list-item-date {
   font-size: 0.6rem;
   opacity: 0.8;
@@ -91,13 +99,15 @@ body {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+
 .asa-playlist-list-item-cover {
   background-color: var(--asa-c3);
   display: inline-block;
   background-size: cover;
   background-position: center;
-  width: 33%;
+  width: 32%;
   height: 100%;
+  border-left: 0.2rem solid var(--asa-c3);
 }
 
 
@@ -118,6 +128,7 @@ body {
   min-height: 25%;
   overflow-y: scroll;
 }
+
 .asa-track {
   padding: 0.2rem;
   padding-left: 1rem;
@@ -128,15 +139,19 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .asa-track:nth-of-type(even) {
   background: var(--asa-c2);
 }
+
 .asa-track:nth-of-type(odd) {
   background: var(--asa-c3);
 }
+
 .asa-track:hover {
   background: var(--asa-c3b);
 }
+
 .asa-track-playing {
   background: var(--asa-c4) !important;
   color: var(--asa-c1);
@@ -146,9 +161,11 @@ body {
 .asa-controls {
   height: 8%;
 }
+
 .asa-controls-btn-wrap {
   height: 75%;
 }
+
 .asa-btn {
   background-color: var(--asa-c2);
   border: none;
@@ -160,39 +177,46 @@ body {
   border-bottom: 0.2rem solid var(--asa-c3);
   font-weight: bold;
 }
+
 .asa-btn:hover {
   background-color: var(--asa-c3);
 }
+
 .asa-btn span {
   display: inline-block;
   width: 100%;
   height: 100%;
   vertical-align: middle;
 }
+
 .asa-shuffle-icon {
   background-image: url('asaimg/shuffle.png');
   background-size: auto 60%;
   background-repeat: no-repeat;
   background-position: center;
 }
+
 .asa-prev-icon {
   background-image: url('asaimg/prev.png');
   background-size: auto 60%;
   background-repeat: no-repeat;
   background-position: center;
 }
+
 .asa-next-icon {
   background-image: url('asaimg/next.png');
   background-size: auto 60%;
   background-repeat: no-repeat;
   background-position: center;
 }
+
 .asa-pp-icon {
   background-image: url('asaimg/play.png');
   background-size: auto 60%;
   background-repeat: no-repeat;
   background-position: center;
 }
+
 .asa-download-icon {
   background-image: url('asaimg/download.png');
   background-size: auto 60%;
@@ -209,14 +233,29 @@ body {
   height: 7%;
   max-height: 7%;
 }
+
 .asa-now-playing-title {
   font-style: italic;
+  overflow: hidden;
+  width: 100%;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
+
 .asa-now-playing-artist {
   font-weight: bold;
+  overflow: hidden;
+  width: 100%;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
+
 .asa-now-playing-album {
   opacity: 0.5;
+  overflow: hidden;
+  width: 100%;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .asa-album-image {
@@ -237,6 +276,7 @@ body {
   background-color: var(--asa-c4);
   color: var(--asa-c1);
 }
+
 .asa-playing .asa-pp-icon {
   filter: brightness(0) saturate(100%) invert(34%) sepia(98%) saturate(500%) hue-rotate(200deg);
 }
@@ -254,6 +294,7 @@ body {
   cursor: pointer;
   overflow: hidden;
 }
+
 .asa-scrubber-fill {
   background: var(--asa-c4);
   width: 1%;
@@ -271,6 +312,7 @@ body {
   border-radius: 0.25rem;
   overflow: hidden;
 }
+
 .asa-volume-fill {
   background: var(--asa-c4);
   width: 50%;

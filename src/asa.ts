@@ -776,9 +776,9 @@ class Asa {
 
       listElement.appendChild(infoElement);
 
-      const coverElement = document.createElement('div');
+      const coverElement = document.createElement('img');
       coverElement.className = 'asa-playlist-list-item-cover';
-      coverElement.style.backgroundImage = `url("${this.config.pathPrefix}/${playlistData.albumImageUri || ''}")`;
+      coverElement.src = `${this.config.pathPrefix}/${playlistData.albumImageUri}`;
       listElement.appendChild(coverElement);
 
       this.el.playlistTarget.appendChild(listElement);
