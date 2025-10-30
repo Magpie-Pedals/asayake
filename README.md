@@ -5,7 +5,7 @@ Asayake is a static music player that is easy to self-host.
 
 Asayake works by taking a directory of albums containing MP3 files and cover art and automatically turning it into an organized static, web app. Think Spotify / Bandcamp for a personal / collective set of albums. 
 > [!NOTE]  
-> The resulting web app can be hosted on any static file or object storage server. There is no back-end code to deal with so its very easy to host. 
+> The resulting web app can be hosted on any static file or object storage server. There is no back-end code to deal with so it's very easy to host. 
 
 The flagship use case is the collection of collaborative albums by the [Magpie Pirates](https://magpiepirates.com/) community. 
 
@@ -17,7 +17,7 @@ Put the albums (audio files) in some directory like `./data`.
 
 You don't have to put the audio files in this repo directory but it makes it easier. 
 
-The `.gitignore` file ignores `data*` so its pretty safe to put it here. 
+The `.gitignore` file ignores `data*` so it's pretty safe to put it here. 
 
 You might have a structure like this:
 ```
@@ -36,7 +36,7 @@ data/
 
 This project was written for `bun`; an alternative to NodeJS, NPM, TSC and more. Its super fast and easy to work with. 
 
-[Intall Bun](https://bun.com/docs/installation)
+[Install Bun](https://bun.com/docs/installation)
 
 [More on Bun](https://bun.com/)
 
@@ -91,7 +91,7 @@ bun tools/build.ts <dir> <res?>
 
 Where `<dir>` is the same directory we ran the ripper on.
 
-The `<res?>` paramter is optional and allows for overriding the static resource directory with your own.
+The `<res?>` parameter is optional and allows for overriding the static resource directory with your own.
 
 ## Serve
 
@@ -99,7 +99,7 @@ The `<dir>` we've been using is now ready to serve.
 
 The files here could be put on a file or object storage server.
 
-For testing we will serve it locally
+For testing, we will serve it locally
 
 ```sh
 bunx http-server <dir>
@@ -109,7 +109,7 @@ Navigate your browser to [`http://localhost:8080`](http://localhost:8080) to vie
 
 ## Deploy
 
-If everything looks good locally, the files in `<dir>` can now be uploaded to a server. Static file servers or object storage work best but you can also use Apache or NGINX. 
+If everything looks good locally, the files in `<dir>` can now be uploaded to a server. Static file servers or object storage work best, but you can also use Apache or NGINX. 
 
 # Usage
 
@@ -240,7 +240,7 @@ asa.yeet(playlist);
 
 ## Playlist Lists
 
-Asayake can also manage and render a list of playlists for you. This is an optional feature. Simply omitting the `playlistListElement` from your config will prevent Asayake from concerning itself with playlists. 
+Asayake can also manage and render a list of playlists for you. This is an optional feature. Simply omitting the `playlistListElement` from your config will prevent Asayake from handling playlists. 
 
 A playlist list type is defined as:
 ```ts
@@ -252,7 +252,7 @@ type AsaPlaylistList = {
 ## Customization
 
 Asayake exposes several CSS classes. Just inspect the `asa-player` element to see them all. 
-All CSS classes used by Asakyake are prefixed with `asa-*`.
+All CSS classes used by Asayake are prefixed with `asa-*`.
 
 When Asayake is currently playing a track the `asa-player` element will get the `asa-playing` class. You can use this to change the CSS:
 ```css
