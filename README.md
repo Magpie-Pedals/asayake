@@ -65,10 +65,15 @@ bun install
 
 Run the ripper tool to extract metadata from the mp3 files.
 ```sh
-bun tools/ripper.ts <dir>
+bun tools/ripper <dir>
 ```
 
 This will output metadata JSON files to `./dist/metadata`.
+
+For example, if we have all our albums in the `./data` directory:
+```sh
+bun tools/ripper data
+```
 
 ## Generate Playlist List
 
@@ -77,7 +82,7 @@ A "playlist list" is a collection of playlists in JSON format.
 We can automatically generate a playlist list after running the main `ripper` script:
 
 ```sh
-bun tools/auto-playlist.ts
+bun tools/auto-playlist
 ```
 
 This will make a `./dist/metadata/playlists.json` file which automatically contains all of the albums in your collection.
@@ -96,12 +101,17 @@ Now we will run the `build` command which will:
 - Move the files in `<res?>` (defaults to `./res`) to the `./<dir>/asa` directory.
 
 ```sh
-bun tools/build.ts <dir> <res?>
+bun tools/build <dir> <res?>
 ```
 
 Where `<dir>` is the same directory we ran the ripper on.
 
 The `<res?>` parameter is optional and allows for overriding the static resource directory with your own.
+
+For example if we have our albums in `./data` and we want to use the default resources:
+```sh
+bun tools/build data
+```
 
 ## Serve
 
@@ -116,6 +126,11 @@ bunx http-server <dir>
 ```
 
 Navigate your browser to [`http://localhost:8080`](http://localhost:8080) to view the player.
+
+For example, if our albums are in `./data` we can do:
+```sh
+bunx http-server data
+```
 
 ## Deploy
 
