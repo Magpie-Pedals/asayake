@@ -41,12 +41,17 @@ type AsaVis = {
   analyserL: AnalyserNode;
   analyserR: AnalyserNode;
   bufferLength: number;
+  dataArrayL: Uint8Array<ArrayBuffer>;
+  dataArrayR: Uint8Array<ArrayBuffer>;
+  dataArrayM: Uint8Array<ArrayBuffer>;
   rmsL: number;
   rmsR: number;
   rmsM: number;
   mode: number;
   img: HTMLImageElement | null;
   shader: AsaShader;
+  intervalId: number;
+  intervalRunning: boolean;
 };
 
 // Configuration for Asa player
@@ -302,44 +307,12 @@ class Asa {
   }
   // Main draw loop
   // Called via requestAnimationFrame
+  // TODO: The uniforms should only be updated about 60 times per second
+  // Move the updates out of the draw loop and call them on a timer instead
   private draw(): void {
     if (!this.vis) this.error("Visualization context not initialized");
     // Update audio data
     requestAnimationFrame(this.draw.bind(this));
-    let dataArrayL: Uint8Array<ArrayBuffer> = new Uint8Array(this.vis.bufferLength);
-    let dataArrayR: Uint8Array<ArrayBuffer> = new Uint8Array(this.vis.bufferLength);
-    let dataArrayM: Uint8Array<ArrayBuffer> = new Uint8Array(this.vis.bufferLength);
-    this.vis.analyserL.getByteFrequencyData(dataArrayL);
-    this.vis.analyserR.getByteFrequencyData(dataArrayR);
-    // Merge left and right channels for mono data
-    if (this.vis) {
-      for (let i = 0; i < this.vis.bufferLength; i++) {
-        const l = dataArrayL[i] || 0;
-        const r = dataArrayR[i] || 0;
-        dataArrayM[i] = (l + r) / 2;
-      }
-    }
-    const timeDomainDataL = new Uint8Array(this.vis.bufferLength);
-    const timeDomainDataR = new Uint8Array(this.vis.bufferLength);
-    this.vis.analyserL.getByteTimeDomainData(timeDomainDataL);
-    this.vis.analyserR.getByteTimeDomainData(timeDomainDataR);
-    // Calculate rms from a buffer
-    const rms = (data: Uint8Array) => {
-      let sum = 0;
-      for (let i = 0; i < data.length; i++) {
-        const v = ((data?.[i] ?? 128) - 128) / 128; // Normalize to [-1, 1]
-        sum += v * v;
-      }
-      return Math.sqrt(sum / data.length);
-    };
-    const rmsLRaw = rms(timeDomainDataL);
-    const rmsRRaw = rms(timeDomainDataR);
-    // Merge rms
-    const rmsMRaw = (rmsLRaw + rmsRRaw) / 2;
-    const alpha = 0.1; // Smoothing factor (0 < alpha < 1)
-    this.vis.rmsL = this.vis.rmsL * (1 - alpha) + rmsLRaw * alpha;
-    this.vis.rmsR = this.vis.rmsR * (1 - alpha) + rmsRRaw * alpha;
-    this.vis.rmsM = this.vis.rmsM * (1 - alpha) + rmsMRaw * alpha;
 
     // Gl draw routine
     const gl = this.vis.ctx;
@@ -359,7 +332,7 @@ class Asa {
     gl.activeTexture(gl.TEXTURE1);
     const analyserLTexture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, analyserLTexture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, bufferLength, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, dataArrayL);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, bufferLength, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, this.vis.dataArrayL);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.uniform1i(locs.uAnalyserL, 1); // Texture unit 1
@@ -367,7 +340,7 @@ class Asa {
     gl.activeTexture(gl.TEXTURE2);
     const analyserRTexture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, analyserRTexture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, bufferLength, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, dataArrayR);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, bufferLength, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, this.vis.dataArrayR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.uniform1i(locs.uAnalyserR, 2); // Texture unit 2
@@ -375,7 +348,7 @@ class Asa {
     gl.activeTexture(gl.TEXTURE3);
     const analyserMTexture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, analyserMTexture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, bufferLength, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, dataArrayM);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, bufferLength, 1, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, this.vis.dataArrayM);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.uniform1i(locs.uAnalyserM, 3); // Texture unit 3
@@ -384,7 +357,6 @@ class Asa {
     gl.activeTexture(gl.TEXTURE0);
     gl.uniform1i(locs.uAlbumImage, 0); // Texture unit 0
     gl.bindTexture(gl.TEXTURE_2D, this.vis.albumImageTexture);
-
     // Prepare fullscreen triangle buffer
     const positions = new Float32Array([
       -1, -1,
@@ -399,11 +371,12 @@ class Asa {
     gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    gl.enableVertexAttribArray(locs.aPosition);
-    gl.vertexAttribPointer(locs.aPosition, 2, gl.FLOAT, false, 0, 0);
+    const aPosition = this.vis.drawLocs.aPosition;
+    gl.enableVertexAttribArray(aPosition);
+    gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
 
     gl.drawArrays(gl.TRIANGLES, 0, 3);
-    gl.disableVertexAttribArray(locs.aPosition);
+    gl.disableVertexAttribArray(aPosition);
     gl.useProgram(null);
   }
   // Update track information and audio source
@@ -459,6 +432,44 @@ class Asa {
         trackEl.classList.add('asa-track-playing');
       }
     }
+  }
+  // Update audio data uniforms
+  private updateShaderData(): void {
+    if (!this.vis) this.error("Visualization context not initialized");
+    this.vis.dataArrayL = new Uint8Array(this.vis.bufferLength);
+    this.vis.dataArrayR = new Uint8Array(this.vis.bufferLength);
+    this.vis.dataArrayM = new Uint8Array(this.vis.bufferLength);
+    this.vis.analyserL.getByteFrequencyData(this.vis.dataArrayL);
+    this.vis.analyserR.getByteFrequencyData(this.vis.dataArrayR);
+    // Merge left and right channels for mono data
+    if (this.vis) {
+      for (let i = 0; i < this.vis.bufferLength; i++) {
+        const l = this.vis.dataArrayL[i] || 0;
+        const r = this.vis.dataArrayR[i] || 0;
+        this.vis.dataArrayM[i] = (l + r) / 2;
+      }
+    }
+    const timeDomainDataL = new Uint8Array(this.vis.bufferLength);
+    const timeDomainDataR = new Uint8Array(this.vis.bufferLength);
+    this.vis.analyserL.getByteTimeDomainData(timeDomainDataL);
+    this.vis.analyserR.getByteTimeDomainData(timeDomainDataR);
+    // Calculate rms from a buffer
+    const rms = (data: Uint8Array) => {
+      let sum = 0;
+      for (let i = 0; i < data.length; i++) {
+        const v = ((data?.[i] ?? 128) - 128) / 128; // Normalize to [-1, 1]
+        sum += v * v;
+      }
+      return Math.sqrt(sum / data.length);
+    };
+    const rmsLRaw = rms(timeDomainDataL);
+    const rmsRRaw = rms(timeDomainDataR);
+    // Merge rms
+    const rmsMRaw = (rmsLRaw + rmsRRaw) / 2;
+    const alpha = 0.1; // Smoothing factor (0 < alpha < 1)
+    this.vis.rmsL = this.vis.rmsL * (1 - alpha) + rmsLRaw * alpha;
+    this.vis.rmsR = this.vis.rmsR * (1 - alpha) + rmsRRaw * alpha;
+    this.vis.rmsM = this.vis.rmsM * (1 - alpha) + rmsMRaw * alpha;
   }
   // Update album image texture
   // Image size might not be power of 2, so set parameters accordingly
@@ -583,17 +594,43 @@ class Asa {
       analyserL: analyserL,
       analyserR: analyserR,
       bufferLength: bufferLength,
+      dataArrayL: new Uint8Array(bufferLength),
+      dataArrayR: new Uint8Array(bufferLength),
+      dataArrayM: new Uint8Array(bufferLength),
       rmsL: 0,
       rmsR: 0,
       rmsM: 0,
       mode: mode,
       img: this.vis?.img ?? new Image(), // Will be set later
       shader: shaders.shader0!,
+      intervalId: 0,
+      intervalRunning: false,
     };
+
+    // Start the uniform update interval
+    // If we updates the data directly in the draw loop,
+    // it will run at the monitor refresh rate
+    // This can be a LOT of updates on high refresh rate monitors
+    // NOTE: A valid intervalId is never 0
+    const fps = 30;
+    if (this.vis.intervalId) {
+      clearInterval(this.vis.intervalId);
+    }
+    this.vis.intervalId = setInterval(() => {
+      // Use a flag to make sure updates dont overlap
+      // if the browser lags
+      if (this.vis?.intervalRunning) return;
+      this.vis!.intervalRunning = true;
+      this.updateShaderData();
+      this.vis!.intervalRunning = false;
+    }, 1000 / fps);
+
+    // Resume audio context on play
     this.el.audioPlayer.onplay = () => {
       audioCtx.resume();
       this.draw();
     };
+
     // Create default 1x1 white texture to avoid null texture issues
     if (ctx) {
       this.vis.albumImageTexture = ctx.createTexture();
