@@ -125,12 +125,13 @@ For testing, we will serve it locally
 bunx http-server <dir>
 ```
 
-Navigate your browser to [`http://localhost:8080`](http://localhost:8080) to view the player.
-
 For example, if our albums are in `./data` we can do:
 ```sh
 bunx http-server data
 ```
+
+> [!TIP]  
+> Navigate your browser to [`http://localhost:8080`](http://localhost:8080) to view the player.
 
 ## Deploy
 
