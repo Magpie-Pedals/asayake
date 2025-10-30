@@ -1,7 +1,17 @@
 # Asayake
-Asayake is a static music player that is easy to self-host. 
+
+Asayake is a static music player that is easy to self-host. It's designed for independent artists and collectives to self-host their music catalogues without involving any 3rd parties. 
 
 ![screenshot](doc/screenshot.png)
+
+## Features
+- Easy to integrate into existing sites / apps
+- Works with your existing music library
+- Zero dependencies
+- No database or back-end
+- Very little boilerplate
+- 100% TypeScript
+- Supports GLSL shaders for visualizing audio
 
 Asayake works by taking a directory of albums containing MP3 files and cover art and automatically turning it into an organized static, web app. Think Spotify / Bandcamp for a personal / collective set of albums. 
 > [!NOTE]  
