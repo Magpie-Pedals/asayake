@@ -51,9 +51,14 @@ type AsaVis = {
 
 // Configuration for Asa player
 type AsaConfig = {
+  // Prefix path for audio and image files
+  // This can be a relative or absolute path to another server
   pathPrefix: string;
+  // The HTML element to mount the player into
   playerElement: HTMLElement;
+  // Optional HTML element to mount the playlist into
   playlistListElement?: HTMLElement;
+  // Enable or disable logging (default: false)
   log?: boolean;
 };
 

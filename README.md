@@ -1,6 +1,12 @@
 # Asayake
 Asayake is a static music player that is easy to self-host. 
 
+Asayake works by taking a directory of albums containing MP3 files and cover art and automatically turning it into an organized static, web app. Think Spotify / Bandcamp for a personal / collective set of albums. 
+
+The resulting web app can be hosted on any static file or object storage server. There is no back-end code to deal with so its very easy to host. 
+
+The flagship use case is the collection of collaborative albums by the [Magpie Pirates](https://magpiepirates.com/) community. 
+
 # Setup
 
 ## Set up the tracks
@@ -20,7 +26,7 @@ data/
 ---- cover.png
 -- album 1/
 ---- track 1.mp3
----- track 2.mp3
+---- track 2.mp3 
 ---- cover.png
 ```
 
@@ -40,6 +46,8 @@ This project was written for `bun`; an alternative to NodeJS, NPM, TSC and more.
 bun install
 ```
 
+Note: This project currently has no real dependencies, but you will need the `@types/bun` package to avoid compiler warnings. 
+
 ## Ripper
 
 Run the ripper tool to extract metadata from the mp3 files.
@@ -49,7 +57,26 @@ bun tools/ripper.ts <dir>
 
 This will output metadata JSON files to `./dist/metadata`.
 
+## Generate Playlist List
+
+A "playlist list" is a collection of playlists in JSON format. 
+
+We can automatically generate a playlist list after running the main `ripper` script:
+
+```sh
+bun tools/auto-playlist.ts
+```
+
+This will make a `./dist/metadata/playlists.json` file which automatically contains all of the albums in your collection.
+
+Note: This is optional but allows for Asayake to handle playlist navigation. The demo code assumes that you complete this step.
+
 ## Compile
+
+Now we will run the `build` command which will: 
+- Compile the TypeScript to `./dist`.
+- Take the files we have written to `./dist` and move them to an `./<dir>/asa` directory. 
+- Move the files in `<res?>` (defaults to `./res`) to the `./<dir>/asa` directory.
 
 ```sh
 bun tools/build.ts <dir> <res?>
@@ -71,16 +98,51 @@ For testing we will serve it locally
 bunx http-server <dir>
 ```
 
-Navigate your browser to `localhost:8080` to view the player.
+Navigate your browser to [`http://localhost:8080`](http://localhost:8080) to view the player.
+
+## Deploy
+
+If everything looks good locally, the files in `<dir>` can now be uploaded to a server. Static file servers or object storage work best but you can also use Apache or NGINX. 
 
 # Usage
+
+## Configuration
+
+The `Asa` class constructor takes a config like this: 
+
+```ts
+// Configuration for Asa player
+type AsaConfig = {
+  // Prefix path for audio and image files
+  // This can be a relative or absolute path to another server
+  pathPrefix: string;
+  // The HTML element to mount the player into
+  playerElement: HTMLElement;
+  // Optional HTML element to mount the playlist into
+  playlistListElement?: HTMLElement;
+  // Enable or disable logging (default: false)
+  log?: boolean;
+};
+;
+```
+
+For example:
+```js
+const asaConfig = {
+  pathPrefix: '../',
+  playerElement: document.getElementById('asa-player-container'),
+  playlistListElement: document.getElementById('asa-playlist-list-container'),
+  log: true,
+};
+const asa = new Asa(asaConfig);
+```
 
 ## Master Track List
 
 The master track list is a `metadata.json` file that contains a single instance of a `MasterList` type object.
 
 ```ts
-type TrackMeta = {
+type AsaTrackMeta = {
   title: string; // The track title
   artist: string; // The list of artists
   albumTitle: string; // The album name
@@ -92,7 +154,7 @@ type TrackMeta = {
   bitRate?: number; // The bit rate of the track in kbps
 }
 
-type MasterList = {
+type AsaMasterList = {
   [key: string]: TrackMeta;
 };
 ```
@@ -156,12 +218,29 @@ const playlist = [
   '13835280',
   '14389788',
 ];
+// Create a new config
+// Assumes these elements exist
+const asaConfig = {
+  pathPrefix: '../',
+  playerElement: document.getElementById('asa-player-container'),
+  log: true,
+};
 // Create a new instance of asa
-// The `asa-element` is the element where we want to render the player
-const asa = new Asa('asa-element');
+const asa = new Asa(asaConfig);
 // call `yeet` to start Asayake 
 // We can call this again whenever we want to load a new playlist
 asa.yeet(playlist);
+```
+
+## Playlist Lists
+
+Asayake can also manage and render a list of playlists for you. This is an optional feature. Simply omitting the `playlistListElement` from your config will prevent Asayake from concerning itself with playlists. 
+
+A playlist list type is defined as:
+```ts
+type AsaPlaylistList = {
+  [key: string]: AsaPlaylist;
+};
 ```
 
 ## Customization
@@ -184,4 +263,31 @@ When a track in the `asa-playlist` element is selected, the given `asa-track` el
 }
 ```
 
+## Shaders
 
+The GLSL shaders are defined in the `./src/shaders.ts` file. 
+
+A shader type is defined like this:
+```ts
+// Shaders consist of vertex and fragment shader source code
+type AsaShader = {
+  vsSource: string;
+  fsSource: string;
+}
+```
+
+Adding a new shader consists of 2 steps:
+1. Write your shader into the shader file
+2. Modify the `asa.ts` code to include your shader
+
+Shaders are added to Asayake via the `modeMap` property of the `Asa` class:
+```ts
+private modeMap = [
+  { fftSize: 32, shader: shaders.nothing },
+  { fftSize: 2048, shader: shaders.spectrumAnalyzer },
+  { fftSize: 32, shader: shaders.stereoColor },
+  { fftSize: 32, shader: shaders.stereoCAFull },
+];
+```
+
+Note: You must rebuild the project to see the new shaders!
