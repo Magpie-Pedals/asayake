@@ -161,7 +161,7 @@ type AsaConfig = {
 For example:
 ```js
 const asaConfig = {
-  pathPrefix: '../',
+  pathPrefix: '..',
   playerElement: document.getElementById('asa-player-container'),
   playlistListElement: document.getElementById('asa-playlist-list-container'),
   log: true,
@@ -253,7 +253,7 @@ const playlist = [
 // Create a new config
 // Assumes these elements exist
 const asaConfig = {
-  pathPrefix: '../',
+  pathPrefix: '..',
   playerElement: document.getElementById('asa-player-container'),
   log: true,
 };

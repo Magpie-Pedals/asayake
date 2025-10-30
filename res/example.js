@@ -29,7 +29,7 @@ const playlist = {
 const playlistId = "Sample Collab 5";
 
 const asaConfig = {
-  pathPrefix: '../',
+  pathPrefix: '..',
   playerElement: document.getElementById('asa-player-container'),
   playlistListElement: document.getElementById('asa-playlist-list-container'),
   log: true,
