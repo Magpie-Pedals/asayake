@@ -4,8 +4,8 @@ Asayake is a static music player that is easy to self-host.
 ![screenshot](doc/screenshot.png)
 
 Asayake works by taking a directory of albums containing MP3 files and cover art and automatically turning it into an organized static, web app. Think Spotify / Bandcamp for a personal / collective set of albums. 
-
-The resulting web app can be hosted on any static file or object storage server. There is no back-end code to deal with so its very easy to host. 
+> [!NOTE]  
+> The resulting web app can be hosted on any static file or object storage server. There is no back-end code to deal with so its very easy to host. 
 
 The flagship use case is the collection of collaborative albums by the [Magpie Pirates](https://magpiepirates.com/) community. 
 
@@ -40,15 +40,16 @@ This project was written for `bun`; an alternative to NodeJS, NPM, TSC and more.
 
 [More on Bun](https://bun.com/)
 
-*Note: This will likely work with NodeJS / NPM / TSC as well.*
+> [!NOTE]  
+> This will likely work with NodeJS / NPM / TSC as well.
 
 ## Install dependencies
 
 ```sh
 bun install
 ```
-
-*Note: This project currently has no real dependencies, but you will need the `@types/bun` package to avoid compiler warnings.*
+> [!NOTE]  
+> This project currently has no real dependencies, but you will need the `@types/bun` package to avoid compiler warnings.
 
 ## Ripper
 
@@ -71,7 +72,11 @@ bun tools/auto-playlist.ts
 
 This will make a `./dist/metadata/playlists.json` file which automatically contains all of the albums in your collection.
 
-*Note: This is optional but allows for Asayake to handle playlist navigation. The demo code assumes that you complete this step.*
+> [!NOTE]  
+> This is optional but allows for Asayake to handle playlist navigation.
+
+> [!IMPORTANT]
+> The demo code assumes that you complete this step.
 
 ## Compile
 
@@ -290,5 +295,5 @@ private modeMap = [
   { fftSize: 32, shader: shaders.stereoCAFull },
 ];
 ```
-
-*Note: You must rebuild the project to see the new shaders!*
+> [!TIP]  
+> You must rebuild the project to see the new shaders!
