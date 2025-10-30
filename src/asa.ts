@@ -785,12 +785,26 @@ class Asa {
     if (!this.el.playlistTarget) this.error("Playlist list element not initialized");
     if (!this.meta.playlists) this.error("Playlists metadata not initialized");
     this.el.playlistTarget.innerHTML = '';
+
+    // Intersection Observer for lazy loading images
+    const observer = new IntersectionObserver((entries, obs) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          const img = entry.target as HTMLImageElement;
+          const realSrc = img.getAttribute('data-src');
+          if (realSrc) {
+            img.src = realSrc;
+            img.removeAttribute('data-src');
+          }
+          obs.unobserve(img);
+        }
+      }
+    }, { rootMargin: '100px' });
+
     for (const [playlistId, playlistData] of Object.entries(this.meta.playlists)) {
       const listElement = document.createElement('div');
       listElement.className = 'asa-playlist-list-item';
       listElement.onclick = async () => {
-        // We need to preserve the current vis mode
-        // It is reset by yeet
         const visMode = this.vis?.mode || 0;
         await this.yeet(playlistId);
         this.vis!.mode = visMode;
@@ -820,7 +834,10 @@ class Asa {
 
       const coverElement = document.createElement('img');
       coverElement.className = 'asa-playlist-list-item-cover';
-      coverElement.src = `${this.config.pathPrefix}/${playlistData.albumImageUri}`;
+      coverElement.src = 'asaimg/placeholder.png'; // Placeholder image
+      coverElement.setAttribute('data-src', `${this.config.pathPrefix}/${playlistData.albumImageUri}`);
+      observer.observe(coverElement);
+
       listElement.appendChild(coverElement);
 
       this.el.playlistTarget.appendChild(listElement);
