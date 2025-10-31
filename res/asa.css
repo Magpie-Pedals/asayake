@@ -10,6 +10,7 @@
   --asa-sr: 5rem;
 
   --asa-tran: all 0.2s ease;
+  --asa-filter: brightness(0) saturate(100%) invert(34%) sepia(98%) saturate(500%) hue-rotate(200deg);
 }
 
 html,
@@ -304,22 +305,22 @@ body {
 
 /* Highlights on play */
 .asa-playing .asa-pp-button {
-  background-color: var(--asa-c4);
+  background-color: var(--asa-c5);
   color: var(--asa-c1);
 }
 
 .asa-playing .asa-pp-icon {
-  filter: brightness(0) saturate(100%) invert(34%) sepia(98%) saturate(500%) hue-rotate(200deg);
+  filter: var(--asa-filter);
 }
 
 /* Highlights on shuffle */
 .asa-shuffling .asa-shuffle-button {
-  background-color: var(--asa-c4);
+  background-color: var(--asa-c5);
   color: var(--asa-c1);
 }
 
 .asa-shuffling .asa-shuffle-icon {
-  filter: brightness(0) saturate(100%) invert(34%) sepia(98%) saturate(500%) hue-rotate(200deg);
+  filter: var(--asa-filter);
 }
 
 .asa-controls {
