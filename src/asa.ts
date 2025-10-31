@@ -273,6 +273,7 @@ class Asa {
   // TODO: Implement search filtering
   private onSearchInput(): void {
     this.searchFilter = this.el.searchTarget!.value;
+    console.log(`Search filter updated: ${this.searchFilter}`);
   }
   // Scrubber Events
   private attachScrubberEvents(scrubber: HTMLElement): void {
