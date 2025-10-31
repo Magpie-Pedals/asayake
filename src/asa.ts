@@ -11,9 +11,9 @@ import type {
   AsaPlaylistId,
   AsaPlaylistList,
   AsaElements
-} from './types.ts';
+} from './types';
 
-import AsaVis from './vis.ts';
+import AsaVis from './vis';
 
 // Configuration for Asa player
 type AsaConfig = {
