@@ -101,6 +101,29 @@ class Ripper {
       else {
         console.log('JPG not found falling back to PNG');
       }
+      // Resize the image to 512x512 and save to dist/album_art
+      const distAlbumArtDir = `dist/album_art/${audioUri.split(path.sep)[0]}`;
+      fs.mkdirSync(distAlbumArtDir, { recursive: true });
+      const distAlbumArtPathJpg = path.join(distAlbumArtDir, 'cover.jpg');
+      const distAlbumArtPathPng = path.join(distAlbumArtDir, 'cover.png');
+      if (albumImageUri === albumImageUriJpg) {
+        // Copy and resize jpg
+        exec(`ffmpeg -y -i "${searchPath}" -vf "scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2" "${distAlbumArtPathJpg}"`, (error, stdout, stderr) => {
+          if (error) {
+            this.error(`Error resizing album art for ${record.tags.album}: ${error.message}`);
+          }
+        });
+      }
+      else {
+        // Copy and resize png
+        const searchPathPng = path.join(dir, albumImageUriPng);
+        exec(`ffmpeg -y -i "${searchPathPng}" -vf "scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2" "${distAlbumArtPathPng}"`, (error, stdout, stderr) => {
+          if (error) {
+            this.error(`Error resizing album art for ${record.tags.album}: ${error.message}`);
+          }
+        });
+      }
+      albumImageUri = `album_art/${audioUri.split(path.sep)[0]}/` + (albumImageUri === albumImageUriJpg ? 'cover.jpg' : 'cover.png');
       listing[key] = {
         title: record.tags.title,
         artist: record.tags.artist,

@@ -39,4 +39,19 @@ fs.readdirSync('dist').forEach(file => {
     fs.cpSync(srcPath, destPath, { recursive: true });
   }
 });
+
+// Copy album art up one level to data/asa/album_art
+// This allows it to be hosted separately from the app code (with the music)
+console.log('Copying album art to ' + path.join(dirOut, 'album_art'));
+const albumArtSrc = path.join(dirOut, 'asa', 'album_art');
+const albumArtDest = path.join(dirOut, 'album_art');
+if (fs.existsSync(albumArtSrc)) {
+  fs.mkdirSync(albumArtDest, { recursive: true });
+  fs.cpSync(albumArtSrc, albumArtDest, { recursive: true });
+}
+
+// Remove the data/asa/album_art directory
+console.log('Removing temporary album art directory from dist...');
+fs.rmSync(albumArtSrc, { recursive: true, force: true });
+
 console.log('Build complete.');
