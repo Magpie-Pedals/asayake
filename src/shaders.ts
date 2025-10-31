@@ -1,4 +1,4 @@
-import type { AsaShader } from "./asa";
+import type { AsaShader } from "./vis";
 export const shaders: { [key: string]: AsaShader } = {};
 
 const vertexShaderSource = `
