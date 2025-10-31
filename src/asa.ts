@@ -80,14 +80,13 @@ class Asa {
   private isShuffle: boolean = false;
   private intervalId: number | null = null;
   private intervalRunning: boolean = false;
-  private shadersEnabled: boolean = false;
+  private shadersEnabled: boolean = true;
   private vis: AsaVis | null = null;
   // Visualization modes configuration
   private modeMap = [
     { fftSize: 32, shader: shaders.nothing },
     { fftSize: 2048, shader: shaders.spectrumAnalyzer },
-    { fftSize: 32, shader: shaders.stereoColor },
-    { fftSize: 32, shader: shaders.stereoCAFull },
+    { fftSize: 32, shader: shaders.stereoCAHalf },
   ];
   constructor(config: AsaConfig) {
     this.config = config;
