@@ -18,9 +18,10 @@ export type AsaShader = {
 // HTML elements used in the Asa player
 type AsaElements = {
   playerTarget: HTMLElement;
-  playlistTarget: HTMLElement | null;
+  playlistListTarget: HTMLElement | null;
   asa: HTMLElement | null;
   audioPlayer: HTMLAudioElement | null;
+  playlist: HTMLElement | null;
   nowPlayingTitle: HTMLElement | null;
   nowPlayingArtist: HTMLElement | null;
   nowPlayingAlbum: HTMLElement | null;
@@ -92,7 +93,7 @@ class Asa {
     this.config = config;
     this.el = {
       playerTarget: config.playerElement,
-      playlistTarget: config.playlistListElement || null,
+      playlistListTarget: config.playlistListElement || null,
       asa: null,
       audioPlayer: null,
       nowPlayingTitle: null,
@@ -164,7 +165,18 @@ class Asa {
   }
   // Navigate to next track
   private nextTrack(currentIndex: number): void {
-    this.trackIndex = (currentIndex + 1) % this.playlist.length;
+    // Handle shuffle
+    if (this.isShuffle) {
+      const curTrackIndex = this.trackIndex;
+      // Ensure we don't pick the same track again
+      while (this.trackIndex === curTrackIndex && this.playlist.length > 1) {
+        this.trackIndex = Math.floor(Math.random() * this.playlist.length);
+      }
+    }
+    else {
+      // Normal next track
+      this.trackIndex = (currentIndex + 1) % this.playlist.length;
+    }
     this.updateTrack(this.trackIndex);
     this.play();
   }
@@ -198,6 +210,12 @@ class Asa {
   // Shuffle button click handler
   private onShuffleClick(): void {
     this.isShuffle = !this.isShuffle;
+    if (this.isShuffle) {
+      this.el.asa?.classList.add('asa-shuffling');
+    }
+    else {
+      this.el.asa?.classList.remove('asa-shuffling');
+    }
   }
   // Playlist track click handler
   // Updates track and plays it
@@ -232,6 +250,17 @@ class Asa {
       return `${minutes}:${seconds}`;
     };
     timestamp.innerText = `${formatTime(current)} / ${formatTime(duration || 0)}`;
+  }
+  private onDownloadClick(): void {
+    if (!this.el.audioPlayer) this.error("Audio player element not initialized");
+    const track = this.playlist[this.trackIndex];
+    if (!track) this.error("No track loaded for download");
+    const link = document.createElement('a');
+    link.href = `${this.config.pathPrefix}/${track.audioUri}`;
+    link.download = `${track.artist} - ${track.title}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
   // Scrubber Events
   private attachScrubberEvents(scrubber: HTMLElement): void {
@@ -424,6 +453,15 @@ class Asa {
       if (index === trackIndex) {
         trackEl.classList.add('asa-track-playing');
       }
+    }
+    // Focus the current track in the playlist
+    const currentTrackEl = this.el.playlist?.querySelectorAll('.asa-track')[trackIndex] as HTMLElement;
+    if (currentTrackEl) {
+      console.log("Scrolling to current track in playlist");
+      currentTrackEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    else {
+      console.log("Current track element not found in playlist");
     }
   }
   // Update audio data uniforms
@@ -644,17 +682,17 @@ class Asa {
     }
     this.el.asa = document.createElement('div');
     this.el.asa.className = 'asa-player';
-    const playlistElement = document.createElement('div');
-    playlistElement.className = 'asa-playlist';
+    this.el.playlist = document.createElement('div');
+    this.el.playlist.className = 'asa-playlist';
     for (const track of playlist) {
       const trackElement = document.createElement('div');
       trackElement.className = 'asa-track';
       trackElement.onclick = () => this.onPlaylistClick(playlist.indexOf(track));
       trackElement.innerHTML = `${track.artist} - ${track.title} `;
-      playlistElement.appendChild(trackElement);
+      this.el.playlist.appendChild(trackElement);
       this.el.tracks?.push(trackElement);
     }
-    this.el.asa.appendChild(playlistElement);
+    this.el.asa.appendChild(this.el.playlist);
 
     // Append the audio player
     this.el.audioPlayer = document.createElement('audio');
@@ -730,6 +768,7 @@ class Asa {
     const downloadIcon = document.createElement('span');
     downloadIcon.className = 'asa-download-icon';
     downloadButton.appendChild(downloadIcon);
+    downloadButton.onclick = this.onDownloadClick.bind(this);
 
     const scrubber = document.createElement('div');
     scrubber.className = 'asa-scrubber';
@@ -772,13 +811,13 @@ class Asa {
   }
   // Initialize the playlist list UI
   private initPlaylistList(): void {
-    if (!this.el.playlistTarget) this.error("Playlist list element not initialized");
+    if (!this.el.playlistListTarget) this.error("Playlist list element not initialized");
     if (!this.meta.playlists) {
       console.warn("Playlists metadata not initialized, cant create playlist list");
       return;
     }
 
-    if (this.el.playlistTarget.innerHTML !== '') {
+    if (this.el.playlistListTarget.innerHTML !== '') {
       // Already initialized
       return;
     }
@@ -837,7 +876,7 @@ class Asa {
 
       listElement.appendChild(coverElement);
 
-      this.el.playlistTarget.appendChild(listElement);
+      this.el.playlistListTarget.appendChild(listElement);
     }
   }
   // Debug function to log all class names in the player element

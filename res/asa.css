@@ -9,7 +9,7 @@
   --asa-sh: 1%;
   --asa-sr: 5rem;
 
-  --asa-tran: all 0.3s ease;
+  --asa-tran: all 0.2s ease;
 }
 
 html,
@@ -33,6 +33,7 @@ body {
   border-radius: 1rem;
   border: 0.2rem solid var(--asa-c3);
 }
+
 #main-wrap h2 {
   margin: 0;
 }
@@ -166,6 +167,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: var(--asa-tran);
 }
 
 .asa-track:nth-of-type(even) {
@@ -204,6 +206,7 @@ body {
   height: 100%;
   border-bottom: 0.2rem solid var(--asa-c3);
   font-weight: bold;
+  transition: var(--asa-tran);
 }
 
 .asa-btn:hover {
@@ -306,6 +309,16 @@ body {
 }
 
 .asa-playing .asa-pp-icon {
+  filter: brightness(0) saturate(100%) invert(34%) sepia(98%) saturate(500%) hue-rotate(200deg);
+}
+
+/* Highlights on shuffle */
+.asa-shuffling .asa-shuffle-button {
+  background-color: var(--asa-c4);
+  color: var(--asa-c1);
+}
+
+.asa-shuffling .asa-shuffle-icon {
   filter: brightness(0) saturate(100%) invert(34%) sepia(98%) saturate(500%) hue-rotate(200deg);
 }
 
