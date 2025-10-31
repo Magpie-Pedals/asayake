@@ -782,9 +782,12 @@ class Asa {
   }
   // Initialize the playlist list UI
   private initPlaylistList(): void {
+    if (this.el.playlistTarget.innerHTML !== '') {
+      // Already initialized
+      return;
+    }
     if (!this.el.playlistTarget) this.error("Playlist list element not initialized");
     if (!this.meta.playlists) this.error("Playlists metadata not initialized");
-    this.el.playlistTarget.innerHTML = '';
 
     // Intersection Observer for lazy loading images
     const observer = new IntersectionObserver((entries, obs) => {
