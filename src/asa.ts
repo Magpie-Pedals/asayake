@@ -80,6 +80,7 @@ class Asa {
   private isShuffle: boolean = false;
   private intervalId: number | null = null;
   private intervalRunning: boolean = false;
+  private shadersEnabled: boolean = false;
   private vis: AsaVis | null = null;
   // Visualization modes configuration
   private modeMap = [
@@ -312,6 +313,7 @@ class Asa {
   // TODO: The uniforms should only be updated about 60 times per second
   // Move the updates out of the draw loop and call them on a timer instead
   private draw(): void {
+    if (!this.shadersEnabled) return;
     if (!this.vis) this.error("Visualization context not initialized");
     // Update audio data
     requestAnimationFrame(this.draw.bind(this));
@@ -427,6 +429,7 @@ class Asa {
   }
   // Update audio data uniforms
   private updateShaderData(): void {
+    if (!this.shadersEnabled) return;
     if (!this.vis) this.error("Visualization context not initialized");
     // if (this.vis.mode === 0) return; // No visualization
     this.vis.analyserL.getByteFrequencyData(this.vis.dataArrayL);
