@@ -54,7 +54,7 @@ This project was written for `bun`; an alternative to NodeJS, NPM, TSC and more.
 
 If you don't want to or can't install bun on your system. You can run everything via a container. Either using `docker` or `podman`.
 
-Pull the container:
+Pull the container
 ```sh
 podman pull docker.io/oven/bun:latest                                                            
 ```
