@@ -3,8 +3,8 @@
 // cp -r dist/*
 
 import { execSync } from 'child_process';
-import fs from 'fs';
-import path from 'path';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const dirOut = process.argv[2] || 'data';
 const dirRes = process.argv[3] || 'res';

@@ -1,6 +1,6 @@
 import { exec } from 'child_process';
-import fs from 'fs';
-import path from 'path';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // Import types
 import type { AsaMasterList } from '../src/types';
@@ -150,8 +150,10 @@ class Ripper {
   }
 }
 
-const start = Date.now();
-const dir = process.argv[2] || "data";
-await new Ripper().run(dir, true);
-const end = Date.now();
-console.log(`Ripping completed in ${(end - start) / 1000} seconds.`);
+async () => {
+  const start = Date.now();
+  const dir = process.argv[2] || "data";
+  await new Ripper().run(dir, true);
+  const end = Date.now();
+  console.log(`Ripping completed in ${(end - start) / 1000} seconds.`);
+};
