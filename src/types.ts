@@ -1,5 +1,23 @@
 // These types are shared between the frontend and tool code
 
+// HTML elements used in the Asa player
+export type AsaElements = {
+  playerTarget: HTMLElement;
+  playlistListTarget: HTMLElement | null;
+  searchTarget: HTMLInputElement | null;
+  asa: HTMLElement | null;
+  audioPlayer: HTMLAudioElement | null;
+  playlist: HTMLElement | null;
+  nowPlayingTitle: HTMLElement | null;
+  nowPlayingArtist: HTMLElement | null;
+  nowPlayingAlbum: HTMLElement | null;
+  scrubberFill: HTMLElement | null;
+  volumeFill: HTMLElement | null;
+  albumImage: HTMLCanvasElement | null;
+  tracks: HTMLElement[] | null;
+};
+
+
 export type AsaTrackMeta = {
   title: string; // The track title
   artist: string; // The list of artists
