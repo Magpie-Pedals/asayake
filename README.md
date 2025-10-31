@@ -50,6 +50,23 @@ This project was written for `bun`; an alternative to NodeJS, NPM, TSC and more.
 
 [More on Bun](https://bun.com/)
 
+### Bun Container:
+
+If you don't want to or can't install bun on your system. You can run everything via a container. Either using `docker` or `podman`.
+
+Pull the container:
+```sh
+podman pull docker.io/oven/bun:latest                                                            
+```
+
+Now we could for example, run the build script like this:
+```sh
+podman run --rm --init --ulimit memlock=-1:-1 -v "$(pwd)":/workspace -w /workspace oven/bun run /tools/build data_full
+```
+
+> [!TIP]  
+> You can replace `podman` with `docker` to use that instead.
+
 > [!NOTE]  
 > This will likely work with NodeJS / NPM / TSC as well.
 
