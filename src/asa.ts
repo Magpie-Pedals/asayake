@@ -19,6 +19,7 @@ export type AsaShader = {
 type AsaElements = {
   playerTarget: HTMLElement;
   playlistListTarget: HTMLElement | null;
+  searchTarget: HTMLInputElement | null;
   asa: HTMLElement | null;
   audioPlayer: HTMLAudioElement | null;
   playlist: HTMLElement | null;
@@ -64,6 +65,8 @@ type AsaConfig = {
   playerElement: HTMLElement;
   // Optional HTML element to mount the playlist into
   playlistListElement?: HTMLElement;
+  // Optional search box element
+  searchElement?: HTMLInputElement;
   // Enable or disable logging (default: false)
   log?: boolean;
 };
@@ -76,6 +79,7 @@ class Asa {
     master: null as AsaMasterList | null,
     playlists: null as AsaPlaylistList | null,
   };
+  private searchFilter: string = '';
   private playlist: AsaPlaylistInternal = [];
   private trackIndex: number = 0;
   private isShuffle: boolean = false;
@@ -94,6 +98,8 @@ class Asa {
     this.el = {
       playerTarget: config.playerElement,
       playlistListTarget: config.playlistListElement || null,
+      searchTarget: config.searchElement || null,
+      playlist: null,
       asa: null,
       audioPlayer: null,
       nowPlayingTitle: null,
@@ -251,6 +257,7 @@ class Asa {
     };
     timestamp.innerText = `${formatTime(current)} / ${formatTime(duration || 0)}`;
   }
+  // Download button click handler
   private onDownloadClick(): void {
     if (!this.el.audioPlayer) this.error("Audio player element not initialized");
     const track = this.playlist[this.trackIndex];
@@ -261,6 +268,11 @@ class Asa {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  }
+  // Search box input handler
+  // TODO: Implement search filtering
+  private onSearchInput(): void {
+    this.searchFilter = this.el.searchTarget!.value;
   }
   // Scrubber Events
   private attachScrubberEvents(scrubber: HTMLElement): void {
@@ -811,7 +823,10 @@ class Asa {
   }
   // Initialize the playlist list UI
   private initPlaylistList(): void {
-    if (!this.el.playlistListTarget) this.error("Playlist list element not initialized");
+    if (!this.el.playlistListTarget) {
+      console.warn("Playlist list target element not initialized, skipping playlist list creation");
+      return;
+    }
     if (!this.meta.playlists) {
       console.warn("Playlists metadata not initialized, cant create playlist list");
       return;
@@ -935,11 +950,15 @@ class Asa {
     this.updateVisMode();
     this.updateTrack(0);
 
-    if (!this.vis) this.error("Visualization context not initialized");
+    // Setup search
+    if (this.el.searchTarget) {
+      this.el.searchTarget.oninput = this.onSearchInput.bind(this);
+    }
     // Start the uniform update interval
     // If we updates the data directly in the draw loop,
     // it will run at the monitor refresh rate
     // This can be a LOT of updates on high refresh rate monitors
+    if (!this.vis) this.error("Visualization context not initialized");
     // NOTE: A valid intervalId is never 0
     if (this.shaderUpdateIntervalId) {
       console.log("Clearing existing visualization interval", this.shaderUpdateIntervalId);

@@ -32,6 +32,7 @@ const asaConfig = {
   pathPrefix: '..',
   playerElement: document.getElementById('asa-player-container'),
   playlistListElement: document.getElementById('asa-playlist-list-container'),
+  searchElement: document.getElementById('asa-search'),
   log: true,
 };
 
