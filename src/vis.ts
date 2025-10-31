@@ -1,3 +1,8 @@
+/*
+ * Asa Player Visualization Module
+ * Handles WebGL context, shaders, and audio analysis
+*/
+
 import { shaders } from './shaders.ts';
 import type { AsaElements } from './types.ts';
 // Shaders consist of vertex and fragment shader source code
@@ -26,7 +31,6 @@ type AsaVisData = {
   mode: number;
   img: HTMLImageElement | null;
   shader: AsaShader;
-  intervalRunning: boolean;
 };
 
 class AsaVis {
@@ -109,7 +113,6 @@ class AsaVis {
       mode: mode,
       img: this.data?.img ?? new Image(), // Will be set later
       shader: shaders.shader0!,
-      intervalRunning: false,
     };
 
     // Resume audio context on play
@@ -117,7 +120,6 @@ class AsaVis {
       audioCtx.resume();
       this.draw();
     };
-
 
     // Prepare fullscreen triangle buffer
     const positions = new Float32Array([

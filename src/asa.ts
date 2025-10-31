@@ -1,3 +1,8 @@
+/*
+ * Main Class for Asa Audio Player
+ * Handles UI, playback, and playlist management
+*/
+
 import type {
   AsaMasterList,
   AsaPlaylist,
