@@ -3,8 +3,8 @@ import fs from 'fs';
 import path from 'path';
 
 // Import types
-import type { AsaMasterList } from '../src/types.ts';
-import type { AsaRecordRaw } from '../src/types.ts';
+import type { AsaMasterList } from '../src/types';
+import type { AsaRecordRaw } from '../src/types';
 
 class Ripper {
   private exitOnError = true;

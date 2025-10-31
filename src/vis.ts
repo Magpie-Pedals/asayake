@@ -3,8 +3,8 @@
  * Handles WebGL context, shaders, and audio analysis
 */
 
-import { shaders } from './shaders.ts';
-import type { AsaElements } from './types.ts';
+import { shaders } from './shaders';
+import type { AsaElements } from './types';
 // Shaders consist of vertex and fragment shader source code
 export type AsaShader = {
   vsSource: string;
