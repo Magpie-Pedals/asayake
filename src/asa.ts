@@ -8,6 +8,7 @@ import type {
   AsaPlaylistList,
 } from './types.ts';
 
+
 // Shaders consist of vertex and fragment shader source code
 export type AsaShader = {
   vsSource: string;
@@ -50,7 +51,6 @@ type AsaVis = {
   mode: number;
   img: HTMLImageElement | null;
   shader: AsaShader;
-  intervalId: number;
   intervalRunning: boolean;
 };
 
@@ -78,6 +78,8 @@ class Asa {
   private playlist: AsaPlaylistInternal = [];
   private trackIndex: number = 0;
   private isShuffle: boolean = false;
+  private intervalId: number | null = null;
+  private intervalRunning: boolean = false;
   private vis: AsaVis | null = null;
   // Visualization modes configuration
   private modeMap = [
@@ -357,16 +359,6 @@ class Asa {
     gl.activeTexture(gl.TEXTURE0);
     gl.uniform1i(locs.uAlbumImage, 0); // Texture unit 0
     gl.bindTexture(gl.TEXTURE_2D, this.vis.albumImageTexture);
-    // Prepare fullscreen triangle buffer
-    const positions = new Float32Array([
-      -1, -1,
-      3, -1,
-      -1, 3,
-    ]);
-    const buf = this.vis.drawBuf || gl.createBuffer();
-    this.vis.drawBuf = buf;
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STREAM_DRAW);
 
     gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
@@ -436,9 +428,7 @@ class Asa {
   // Update audio data uniforms
   private updateShaderData(): void {
     if (!this.vis) this.error("Visualization context not initialized");
-    this.vis.dataArrayL = new Uint8Array(this.vis.bufferLength);
-    this.vis.dataArrayR = new Uint8Array(this.vis.bufferLength);
-    this.vis.dataArrayM = new Uint8Array(this.vis.bufferLength);
+    // if (this.vis.mode === 0) return; // No visualization
     this.vis.analyserL.getByteFrequencyData(this.vis.dataArrayL);
     this.vis.analyserR.getByteFrequencyData(this.vis.dataArrayR);
     // Merge left and right channels for mono data
@@ -514,9 +504,10 @@ class Asa {
       this.vis.drawProgram = null;
     }
     const cfg = this.modeMap[this.vis.mode] ?? this.modeMap[0];
-    if (cfg!.fftSize) this.setupVisContext(cfg!.fftSize);
-    if (!cfg!.shader) this.error("Shader configuration missing");
-    this.vis.shader = cfg!.shader;
+    if (!cfg) this.error("Invalid visualization mode configuration");
+    if (cfg.fftSize) this.setupVisContext(cfg!.fftSize);
+    if (!cfg.shader) this.error("Shader configuration missing");
+    this.vis.shader = cfg.shader;
     const { vsSource, fsSource } = this.vis.shader;
     // Replace aIndex with aPosition in shader sources if needed
     const patchedVsSource = vsSource.replace(/attribute\s+float\s+aIndex;/, 'attribute vec2 aPosition;');
@@ -548,7 +539,9 @@ class Asa {
   // Called when initializing, changing modes, or changing fftSize
   private setupVisContext(fftSize: number = 2048): void {
     if (!this.el.albumImage || !this.el.audioPlayer) this.error("Album image canvas or audio player not initialized");
+
     console.log("Setting up visualization context");
+
     const ctx = this.el.albumImage.getContext('webgl');
 
     let audioCtx: AudioContext;
@@ -603,33 +596,28 @@ class Asa {
       mode: mode,
       img: this.vis?.img ?? new Image(), // Will be set later
       shader: shaders.shader0!,
-      intervalId: 0,
       intervalRunning: false,
     };
-
-    // Start the uniform update interval
-    // If we updates the data directly in the draw loop,
-    // it will run at the monitor refresh rate
-    // This can be a LOT of updates on high refresh rate monitors
-    // NOTE: A valid intervalId is never 0
-    const fps = 30;
-    if (this.vis.intervalId) {
-      clearInterval(this.vis.intervalId);
-    }
-    this.vis.intervalId = setInterval(() => {
-      // Use a flag to make sure updates dont overlap
-      // if the browser lags
-      if (this.vis?.intervalRunning) return;
-      this.vis!.intervalRunning = true;
-      this.updateShaderData();
-      this.vis!.intervalRunning = false;
-    }, 1000 / fps);
 
     // Resume audio context on play
     this.el.audioPlayer.onplay = () => {
       audioCtx.resume();
       this.draw();
     };
+
+
+    // Prepare fullscreen triangle buffer
+    const positions = new Float32Array([
+      -1, -1,
+      3, -1,
+      -1, 3,
+    ]);
+    const gl = this.vis.ctx;
+    if (!gl) this.error("WebGL context not initialized");
+    this.vis.drawBuf = this.vis.drawBuf || gl.createBuffer();
+    const buf = this.vis.drawBuf;
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STREAM_DRAW);
 
     // Create default 1x1 white texture to avoid null texture issues
     if (ctx) {
@@ -782,12 +770,13 @@ class Asa {
   }
   // Initialize the playlist list UI
   private initPlaylistList(): void {
+    if (!this.el.playlistTarget) this.error("Playlist list element not initialized");
+    if (!this.meta.playlists) this.error("Playlists metadata not initialized");
+
     if (this.el.playlistTarget.innerHTML !== '') {
       // Already initialized
       return;
     }
-    if (!this.el.playlistTarget) this.error("Playlist list element not initialized");
-    if (!this.meta.playlists) this.error("Playlists metadata not initialized");
 
     // Intersection Observer for lazy loading images
     const observer = new IntersectionObserver((entries, obs) => {
@@ -901,6 +890,29 @@ class Asa {
     // Make sure we have the right draw function
     this.updateVisMode();
     this.updateTrack(0);
+
+    if (!this.vis) this.error("Visualization context not initialized");
+    // Start the uniform update interval
+    // If we updates the data directly in the draw loop,
+    // it will run at the monitor refresh rate
+    // This can be a LOT of updates on high refresh rate monitors
+    // NOTE: A valid intervalId is never 0
+    if (this.intervalId) {
+      console.log("Clearing existing visualization interval", this.intervalId);
+      clearInterval(this.intervalId);
+      this.intervalRunning = false;
+    }
+    const fps = 30;
+    console.log("Starting visualization interval");
+    this.intervalId = setInterval(() => {
+      // Use a flag to make sure updates dont overlap
+      // if the browser lags
+      if (this.intervalRunning) return;
+      this.intervalRunning = true;
+      this.updateShaderData();
+      this.intervalRunning = false;
+    }, 1000 / fps);
+    console.log("Visualization interval ID:", this.intervalId);
   }
 }
 
