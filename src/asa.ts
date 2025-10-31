@@ -78,8 +78,8 @@ class Asa {
   private playlist: AsaPlaylistInternal = [];
   private trackIndex: number = 0;
   private isShuffle: boolean = false;
-  private intervalId: number | null = null;
-  private intervalRunning: boolean = false;
+  private shaderUpdateIntervalId: number | null = null;
+  private shaderUpdataIntervalRunning: boolean = false;
   private shadersEnabled: boolean = true;
   private vis: AsaVis | null = null;
   // Visualization modes configuration
@@ -773,7 +773,10 @@ class Asa {
   // Initialize the playlist list UI
   private initPlaylistList(): void {
     if (!this.el.playlistTarget) this.error("Playlist list element not initialized");
-    if (!this.meta.playlists) this.error("Playlists metadata not initialized");
+    if (!this.meta.playlists) {
+      console.warn("Playlists metadata not initialized, cant create playlist list");
+      return;
+    }
 
     if (this.el.playlistTarget.innerHTML !== '') {
       // Already initialized
@@ -899,22 +902,22 @@ class Asa {
     // it will run at the monitor refresh rate
     // This can be a LOT of updates on high refresh rate monitors
     // NOTE: A valid intervalId is never 0
-    if (this.intervalId) {
-      console.log("Clearing existing visualization interval", this.intervalId);
-      clearInterval(this.intervalId);
-      this.intervalRunning = false;
+    if (this.shaderUpdateIntervalId) {
+      console.log("Clearing existing visualization interval", this.shaderUpdateIntervalId);
+      clearInterval(this.shaderUpdateIntervalId);
+      this.shaderUpdataIntervalRunning = false;
     }
     const fps = 30;
     console.log("Starting visualization interval");
-    this.intervalId = setInterval(() => {
+    this.shaderUpdateIntervalId = setInterval(() => {
       // Use a flag to make sure updates dont overlap
       // if the browser lags
-      if (this.intervalRunning) return;
-      this.intervalRunning = true;
+      if (this.shaderUpdataIntervalRunning) return;
+      this.shaderUpdataIntervalRunning = true;
       this.updateShaderData();
-      this.intervalRunning = false;
+      this.shaderUpdataIntervalRunning = false;
     }, 1000 / fps);
-    console.log("Visualization interval ID:", this.intervalId);
+    console.log("Visualization interval ID:", this.shaderUpdateIntervalId);
   }
 }
 
