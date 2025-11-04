@@ -39,7 +39,7 @@ class Asa {
     master: null as AsaMasterList | null,
     playlists: null as AsaPlaylistList | null,
   };
-  private firstInit: boolean = true;
+  private firstInit: boolean = true; // Only true on first yeet() call, for query param handling
   private playlistId: AsaPlaylistId | null = null; // Only used if loading by ID, only for URL params
   private searchFilter: string = '';
   private playlist: AsaPlaylistInternal = [];
@@ -586,7 +586,30 @@ class Asa {
     if (this.playlist.length === 0) {
       this.error("Playlist is empty");
     }
-
+  }
+  private checkQueryParams(): boolean {
+    let foundQueryParams = false;
+    if (this.firstInit) {
+      this.firstInit = false;
+      const urlParams = new URLSearchParams(window.location.search);
+      const pParam = urlParams.get('p');
+      const tParam = urlParams.get('t');
+      if (pParam) {
+        console.log(`URL parameter 'p' found: ${pParam}`);
+        const playlist = pParam as AsaPlaylistId;
+        this.playlistId = pParam;
+        this.initPlaylist(playlist);
+        foundQueryParams = true;
+      }
+      if (tParam) {
+        const tIndex = parseInt(tParam, 10);
+        if (!isNaN(tIndex)) {
+          console.log(`URL parameter 't' found: ${tIndex}`);
+          this.trackIndex = tIndex;
+        }
+      }
+    }
+    return foundQueryParams;
   }
   // Debug function to log all class names in the player element
   public printClassNames(): void {
@@ -613,30 +636,13 @@ class Asa {
     if (!this.meta.master) {
       throw new Error("Master metadata not initialized");
     }
-    let foundQueryParams = false;
-    if (this.firstInit) {
-      this.firstInit = false;
-      const urlParams = new URLSearchParams(window.location.search);
-      const pParam = urlParams.get('p');
-      const tParam = urlParams.get('t');
-      if (pParam) {
-        console.log(`URL parameter 'p' found: ${pParam}`);
-        playlist = pParam as AsaPlaylistId;
-        this.playlistId = pParam;
-        this.initPlaylist(playlist);
-        foundQueryParams = true;
-      }
-      if (tParam) {
-        const tIndex = parseInt(tParam, 10);
-        if (!isNaN(tIndex)) {
-          console.log(`URL parameter 't' found: ${tIndex}`);
-          this.trackIndex = tIndex;
-        }
-      }
-    }
+    // If we have query params, they override the passed playlist
+    const foundQueryParams = this.checkQueryParams();
     // Init the playlist
     if (!foundQueryParams) this.initPlaylist(playlist);
     // Initialize the playlist list UI
+    // Only does anything on first call
+    // Only if playlist list target is provided
     this.initPlaylistList();
     // Initialize the player UI
     this.initPlayer(this.playlist);
