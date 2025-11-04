@@ -220,10 +220,37 @@ class Asa {
     document.body.removeChild(link);
   }
   // Search box input handler
-  // TODO: Implement search filtering
   private onSearchInput(): void {
     this.searchFilter = this.el.searchTarget!.value;
     console.log(`Search filter updated: ${this.searchFilter}`);
+    if (!this.meta.master) this.error("Master metadata not initialized");
+
+    // Build a raw playlist (array of track IDs) based on the search filter
+    const filteredIds: string[] = [];
+    const filterLower = this.searchFilter.toLowerCase();
+    for (const [trackId, track] of Object.entries(this.meta.master)) {
+      if (
+        track.title.toLowerCase().includes(filterLower) ||
+        track.artist.toLowerCase().includes(filterLower) ||
+        track.albumTitle.toLowerCase().includes(filterLower)
+      ) {
+        filteredIds.push(trackId);
+      }
+    }
+    if (filteredIds.length === 0) {
+      console.log("No tracks match the search filter");
+      return;
+    }
+    // Call yeet with the filtered raw playlist
+    this.yeet(filteredIds);
+    // Set the albumId
+    this.playlistId = 'search';
+  }
+  private clearSearch(): void {
+    if (!this.el.searchTarget) this.error("Search target element not initialized");
+    this.el.searchTarget.value = '';
+    this.searchFilter = '';
+    console.log("Search filter cleared");
   }
   // Scrubber Events
   private attachScrubberEvents(scrubber: HTMLElement): void {
@@ -289,6 +316,13 @@ class Asa {
       window.addEventListener('pointerup', onPointerUp);
     });
   }
+  private updateQueryParams(trackIndex: number): void {
+    // Update the query params
+    const url = new URL(window.location.href);
+    url.searchParams.set('p', this.playlistId || 'custom');
+    url.searchParams.set('t', trackIndex.toString());
+    window.history.replaceState({}, '', url.toString());
+  }
   // Update track information and audio source
   // Called when changing tracks
   private updateTrack(trackIndex: number): void {
@@ -346,11 +380,7 @@ class Asa {
     else {
       console.log("Current track element not found in playlist");
     }
-    // Update the query params
-    const url = new URL(window.location.href);
-    url.searchParams.set('p', this.playlistId || 'custom');
-    url.searchParams.set('t', trackIndex.toString());
-    window.history.replaceState({}, '', url.toString());
+    this.updateQueryParams(trackIndex);
   }
   // Initialize the player UI
   // Called when loading a playlist
@@ -527,6 +557,8 @@ class Asa {
         this.vis.setVisMode(visMode);
         this.play();
         this.playlistId = playlistId;
+        this.updateQueryParams(0);
+        this.clearSearch();
       };
 
       const infoElement = document.createElement('div');
@@ -598,7 +630,12 @@ class Asa {
       if (pParam) {
         console.log(`URL parameter 'p' found: ${pParam}`);
         const playlist = pParam as AsaPlaylistId;
-        this.playlistId = pParam;
+        // Validate playlist ID
+        if (this.meta.playlists && !this.meta.playlists[playlist]) {
+          console.warn(`Playlist ID '${playlist}' from URL not found in metadata, ignoring`);
+          return false;
+        }
+        this.playlistId = playlist;
         this.initPlaylist(playlist);
         foundQueryParams = true;
       }
@@ -606,6 +643,10 @@ class Asa {
         const tIndex = parseInt(tParam, 10);
         if (!isNaN(tIndex)) {
           console.log(`URL parameter 't' found: ${tIndex}`);
+          if (tIndex < 0 || tIndex >= this.playlist.length) {
+            console.warn(`Track index '${tIndex}' from URL is out of bounds, ignoring`);
+            return foundQueryParams;
+          }
           this.trackIndex = tIndex;
         }
       }
