@@ -58,46 +58,6 @@ body {
   display: none;
 }
 
-@media (max-width: 1000px) {
-  body {
-    /* background: red; */
-    overflow: hidden;
-  }
-
-  #main-wrap {
-    padding: 0;
-    width: 99%;
-    height: auto;
-  }
-
-  #asa-player-container {
-    width: 100%;
-    max-width: 100%;
-    height: auto;
-    max-height: auto;
-  }
-
-  #asa-playlist-list-container {
-    width: 0%;
-    max-width: 100%;
-  }
-
-  #asa-show-playlists {
-    display: block;
-  }
-
-  #top-area {
-    padding-left: 1rem;
-    padding-right: 1rem;
-    width: calc(100% - 2rem);
-  }
-
-  .asa-player {
-    width: 100%;
-    height: auto;
-  }
-}
-
 #top-area {
   display: flex;
   flex-direction: row;
@@ -439,3 +399,44 @@ body {
 /*   scrollbar-width: thin; */
 /*   scrollbar-color: var(--asa-c3) var(--asa-c2); */
 /* } */
+
+
+@media (max-width: 1000px) {
+  body {
+    /* background: red; */
+    overflow: hidden;
+  }
+
+  #main-wrap {
+    padding: 0;
+    width: 99%;
+    height: auto;
+  }
+
+  #asa-player-container {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: auto;
+  }
+
+  #asa-playlist-list-container {
+    width: 0%;
+    max-width: 100%;
+  }
+
+  #asa-show-playlists {
+    display: block;
+  }
+
+  #top-area {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    width: calc(100% - 2rem);
+  }
+
+  .asa-player {
+    width: 100%;
+    height: auto;
+  }
+}
