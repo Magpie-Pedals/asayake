@@ -9,6 +9,7 @@ import type {
   AsaPlaylistSimple,
   AsaPlaylistInternal,
   AsaPlaylistId,
+  AsaPlaylistUnion,
   AsaPlaylistList,
   AsaElements
 } from './types';
@@ -559,7 +560,7 @@ class Asa {
       this.el.playlistListTarget.appendChild(listElement);
     }
   }
-  private initPlaylist(playlist: AsaPlaylist | AsaPlaylistSimple | AsaPlaylistId) {
+  private initPlaylist(playlist: AsaPlaylistUnion): void {
     if (!this.meta.master) {
       throw new Error("Master metadata not initialized");
     }
@@ -628,7 +629,7 @@ class Asa {
   }
   // Load and play a playlist
   // Accepts various playlist formats or IDs
-  public async yeet(playlist: AsaPlaylist | AsaPlaylistSimple | AsaPlaylistId): Promise<void> {
+  public async yeet(playlist: AsaPlaylistUnion): Promise<void> {
     // We only want to grab the  master list once
     if (!this.meta.master) {
       await this.fetchMetadata();

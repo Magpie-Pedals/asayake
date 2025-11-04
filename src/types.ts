@@ -64,6 +64,9 @@ export type AsaPlaylist = {
 
 export type AsaPlaylistSimple = AsaTrackId[];
 
+// A union type for all playlist representations
+export type AsaPlaylistUnion = AsaPlaylist | AsaPlaylistSimple | AsaPlaylistId;
+
 export type AsaPlaylistList = {
   [key: string]: AsaPlaylist;
 };
