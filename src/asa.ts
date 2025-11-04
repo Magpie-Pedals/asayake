@@ -39,6 +39,8 @@ class Asa {
     master: null as AsaMasterList | null,
     playlists: null as AsaPlaylistList | null,
   };
+  private firstInit: boolean = true;
+  private playlistId: AsaPlaylistId | null = null; // Only used if loading by ID, only for URL params
   private searchFilter: string = '';
   private playlist: AsaPlaylistInternal = [];
   private trackIndex: number = 0;
@@ -343,6 +345,11 @@ class Asa {
     else {
       console.log("Current track element not found in playlist");
     }
+    // Update the query params
+    const url = new URL(window.location.href);
+    url.searchParams.set('p', this.playlistId || 'custom');
+    url.searchParams.set('t', trackIndex.toString());
+    window.history.replaceState({}, '', url.toString());
   }
   // Initialize the player UI
   // Called when loading a playlist
@@ -518,6 +525,7 @@ class Asa {
         await this.yeet(playlistId);
         this.vis.setVisMode(visMode);
         this.play();
+        this.playlistId = playlistId;
       };
 
       const infoElement = document.createElement('div');
@@ -551,28 +559,7 @@ class Asa {
       this.el.playlistListTarget.appendChild(listElement);
     }
   }
-  // Debug function to log all class names in the player element
-  public printClassNames(): void {
-    if (!this.el.asa) this.error("Asa player element not initialized");
-    const elements = this.el.asa.querySelectorAll('*');
-    const classSet = new Set<string>();
-    elements.forEach(el => {
-      el.classList.forEach(cls => classSet.add(cls));
-    });
-    // Also include the root element's classes
-    this.el.asa.classList.forEach(cls => classSet.add(cls));
-    console.log("Asa Player Class Names:");
-    for (const cls of classSet) {
-      console.log(cls);
-    }
-  }
-  // Load and play a playlist
-  // Accepts various playlist formats or IDs
-  public async yeet(playlist: AsaPlaylist | AsaPlaylistSimple | AsaPlaylistId): Promise<void> {
-    // We only want to grab the  master list once
-    if (!this.meta.master) {
-      await this.fetchMetadata();
-    }
+  private initPlaylist(playlist: AsaPlaylist | AsaPlaylistSimple | AsaPlaylistId) {
     if (!this.meta.master) {
       throw new Error("Master metadata not initialized");
     }
@@ -599,12 +586,64 @@ class Asa {
     if (this.playlist.length === 0) {
       this.error("Playlist is empty");
     }
+
+  }
+  // Debug function to log all class names in the player element
+  public printClassNames(): void {
+    if (!this.el.asa) this.error("Asa player element not initialized");
+    const elements = this.el.asa.querySelectorAll('*');
+    const classSet = new Set<string>();
+    elements.forEach(el => {
+      el.classList.forEach(cls => classSet.add(cls));
+    });
+    // Also include the root element's classes
+    this.el.asa.classList.forEach(cls => classSet.add(cls));
+    console.log("Asa Player Class Names:");
+    for (const cls of classSet) {
+      console.log(cls);
+    }
+  }
+  // Load and play a playlist
+  // Accepts various playlist formats or IDs
+  public async yeet(playlist: AsaPlaylist | AsaPlaylistSimple | AsaPlaylistId): Promise<void> {
+    // We only want to grab the  master list once
+    if (!this.meta.master) {
+      await this.fetchMetadata();
+    }
+    if (!this.meta.master) {
+      throw new Error("Master metadata not initialized");
+    }
+    let foundQueryParams = false;
+    if (this.firstInit) {
+      this.firstInit = false;
+      const urlParams = new URLSearchParams(window.location.search);
+      const pParam = urlParams.get('p');
+      const tParam = urlParams.get('t');
+      if (pParam) {
+        console.log(`URL parameter 'p' found: ${pParam}`);
+        playlist = pParam as AsaPlaylistId;
+        this.playlistId = pParam;
+        this.initPlaylist(playlist);
+        foundQueryParams = true;
+      }
+      if (tParam) {
+        const tIndex = parseInt(tParam, 10);
+        if (!isNaN(tIndex)) {
+          console.log(`URL parameter 't' found: ${tIndex}`);
+          this.trackIndex = tIndex;
+        }
+      }
+    }
+    // Init the playlist
+    if (!foundQueryParams) this.initPlaylist(playlist);
+    // Initialize the playlist list UI
     this.initPlaylistList();
+    // Initialize the player UI
     this.initPlayer(this.playlist);
     // Set up the audio context
     this.vis.init();
     // Make sure we have the right draw function
-    this.updateTrack(0);
+    this.updateTrack(this.trackIndex); // Defaults to 0
 
     // Setup search
     if (this.el.searchTarget) {
